@@ -1,0 +1,5 @@
+# Helper-script dependencies for the find-and-scrape-data skill.
+# Kept intentionally small so the skill stays light (Agent-Reach style).
+httpx>=0.27
+# Optional — only needed for JS-rendered pages in probe.py:
+# playwright>=1.44

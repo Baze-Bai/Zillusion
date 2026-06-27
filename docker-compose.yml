@@ -1,0 +1,108 @@
+# Zillusion — self-hosted stack.
+#
+# Host ports bind to ${BIND_HOST:-127.0.0.1} (loopback) by DEFAULT — safe for
+# single-user self-hosting. To expose on a LAN/server, set BIND_HOST=0.0.0.0 in
+# .env AND put the app behind your own auth / reverse proxy (see SECURITY.md).
+#
+# Profiles:
+#   (default)             postgres + redis + searxng + backend + frontend
+#   --profile embeddings  adds qdrant (semantic dedup; degrades gracefully if absent)
+#
+# Firecrawl (page scraping / deep fetch) is NOT bundled — bring your own:
+#   - Cloud:     in backend/.env set SEARCH_FIRECRAWL_USE_SELF_HOSTED=false
+#                and SEARCH_FIRECRAWL_API_KEY=<your key>
+#   - Self-host: run firecrawl separately and point
+#                SEARCH_FIRECRAWL_SELF_HOSTED_URL at it
+#   See https://github.com/firecrawl/firecrawl
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: discovery_agent
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${BIND_HOST:-127.0.0.1}:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${BIND_HOST:-127.0.0.1}:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+
+  searxng:
+    image: searxng/searxng:latest
+    ports:
+      - "${BIND_HOST:-127.0.0.1}:8888:8080"
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8888/
+      - SEARXNG_SECRET=${SEARXNG_SECRET:?set SEARXNG_SECRET in .env (openssl rand -hex 32)}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Optional: semantic-dedup vector store. Enable with `--profile embeddings`.
+  qdrant:
+    image: qdrant/qdrant:v1.12.1
+    profiles: ["embeddings"]
+    ports:
+      - "${BIND_HOST:-127.0.0.1}:6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "${BIND_HOST:-127.0.0.1}:8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      # Container-network service addresses override the .env localhost defaults.
+      - DB_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/discovery_agent
+      - REDIS_URL=redis://redis:6379/0
+      - SEARCH_SEARXNG_URL=http://searxng:8080
+    volumes:
+      - ./backend/src:/app/src
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      searxng:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "${BIND_HOST:-127.0.0.1}:3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - BACKEND_INTERNAL_URL=http://backend:8000
+    volumes:
+      - ./frontend/src:/app/src
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  qdrant_data:

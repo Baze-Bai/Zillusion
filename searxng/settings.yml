@@ -1,0 +1,56 @@
+use_default_settings: true
+
+# ═══════════════════════════════════════════════════════════════
+# SearXNG 自托管搜索引擎配置
+# 为 DataSource Discovery Agent 启用 JSON API
+# ═══════════════════════════════════════════════════════════════
+
+general:
+  debug: false
+  instance_name: "DataSource Agent SearXNG"
+  contact_url: false
+  enable_metrics: false
+
+# 开启 JSON API（默认只有 HTML）—— agent 调用必需
+search:
+  safe_search: 0
+  autocomplete: ""
+  default_lang: "all"
+  formats:
+    - html
+    - json
+
+server:
+  # secret_key 必须改，Docker 会从环境变量读取
+  secret_key: "CHANGE_ME_VIA_ENV"
+  port: 8080
+  bind_address: "0.0.0.0"
+  base_url: false
+  image_proxy: false
+  # 不限制 IP（内部网络使用）
+  limiter: false
+
+ui:
+  static_use_hash: true
+
+# 启用的搜索引擎
+engines:
+  - name: google
+    disabled: false
+  - name: bing
+    disabled: false
+  - name: duckduckgo
+    disabled: false
+  - name: brave
+    disabled: false
+  - name: wikipedia
+    disabled: false
+  - name: github
+    disabled: false
+  - name: arxiv
+    disabled: false
+  - name: semantic scholar
+    disabled: false
+  # 禁用可能有反爬问题的引擎
+  - name: google scholar
+    disabled: true

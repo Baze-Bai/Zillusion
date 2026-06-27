@@ -1,0 +1,42 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/guard_append_only.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/guard_credentials_read.py"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/inject_memory_and_skills.py"
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/inject_validation_feedback.py"
+          },
+          {
+            "type": "command",
+            "command": "python .claude/hooks/inject_run_feedback.py"
+          }
+        ]
+      }
+    ]
+  }
+}

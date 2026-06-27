@@ -1,0 +1,57 @@
+[project]
+name = "claude-code-browser-harness-mcp"
+version = "0.1.0"
+description = "Browser-driven crawler exploration (harness variant) with cross-site skill accumulation"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp>=1.0.0",
+    "playwright>=1.49.0",
+    "pydantic>=2.10.0",
+    "pyyaml>=6.0.2",
+    "claude-agent-sdk>=0.2.0",
+    # Vision submodel ("eyes" for a text base model): mcp_server/vision.py builds an
+    # AsyncAnthropic client (pointed at the LiteLLM proxy via ANTHROPIC_BASE_URL) to
+    # turn a screenshot into a short text answer for browser_vision_probe.
+    "anthropic>=0.40",
+    # HTTP client for workflow.py media downloads (T3 — image / direct audio / external)
+    "httpx>=0.28.0",
+    # Reddit / YouTube / generic HLS+mp4 video downloader; uses ffmpeg from PATH
+    # for mux. Required for workflow.py video extraction (T3).
+    "yt-dlp>=2025.1.0",
+    # HTTP library needed by some downloaded generator scripts (e.g.
+    # china-hotel-extractor's requests.Session() constructor).
+    "requests>=2.31.0",
+    # HTML parsing for static-page workflow scrapers (BeautifulSoup with lxml).
+    "beautifulsoup4>=4.12.0",
+    "lxml>=6.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[project.scripts]
+browser-harness-mcp = "mcp_server.server:main"
+crawler-explorer = "runtime.cli:main"
+
+[tool.pytest.ini_options]
+# async tests/fixtures run without per-test @pytest.mark.asyncio decoration.
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    "browser: launches a real headless Chromium (needs `playwright install chromium`)",
+    "network: talks to a real external service (jsonplaceholder smoke) — needs internet",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["mcp_server", "runtime"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100

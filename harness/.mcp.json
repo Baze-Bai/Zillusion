@@ -1,0 +1,9 @@
+{
+  "_comment": "MCP server entry. command pinned to harness's .venv python so we don't accidentally use global miniconda where new deps (yt-dlp, etc.) aren't installed. If you move the harness, update this path or use ${workspaceFolder} after verifying Claude Code expands it (last test: did NOT — see memory/sessions/2026-05-15-...).",
+  "mcpServers": {
+    "browser-harness": {
+      "command": "E:\\Zillusion_v1\\claude-code-browser-harness\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "mcp_server.server"]
+    }
+  }
+}

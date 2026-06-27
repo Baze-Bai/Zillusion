@@ -1,0 +1,107 @@
+[project]
+name = "datasource-discovery-agent"
+version = "0.1.0"
+description = "Unified Data Source Discovery Agent - Production-grade 8-stage pipeline for discovering APIs, files, and embedded data"
+requires-python = ">=3.12"
+dependencies = [
+    # === Web Framework ===
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "sse-starlette>=2.0.0",
+    # === Data Validation ===
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    # config.py loads backend/.env into os.environ before Settings() so a bare
+    # uvicorn/pytest launch matches docker-compose's env_file behavior.
+    "python-dotenv>=1.0.0",
+    # === LLM / Agent ===
+    "langgraph>=0.2.60",
+    "langchain-core>=0.3.30",
+    "litellm>=1.55.0",
+    "instructor>=1.7.0",
+    "langsmith>=0.2.10",
+    # Claude Agent SDK — official Anthropic agent harness (formerly "Claude Code SDK").
+    # Used by Phase 4+ agentic super-node that replaces route_sources / discover /
+    # 3A-3E / process_by_type / normalize_dedupe. Requires ANTHROPIC_API_KEY.
+    # Pre-1.0 — pin a known-good version, watch changelog for breaking changes.
+    # Floor raised to 0.1.81: the streaming-input prompt (AsyncIterable) used for
+    # turn-level live steering is not guaranteed at 0.1.0.
+    "claude-agent-sdk>=0.1.81",
+    # === Database ===
+    # SQLite (aiosqlite) is the single-user default (see config.DatabaseConfig);
+    # asyncpg kept so DB_URL can point at Postgres without a dependency change.
+    "sqlalchemy[asyncio]>=2.0.36",
+    "aiosqlite>=0.20.0",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    # === Cache & Queue ===
+    "redis[hiredis]>=5.2.0",
+    "arq>=0.26.1",
+    # === HTTP Client ===
+    "httpx>=0.28.0",
+    "aiohttp>=3.11.0",
+    "tenacity>=9.0.0",
+    "aiolimiter>=1.2.1",
+    # === Extraction ===
+    "extruct>=0.18.0",
+    "w3lib>=2.2.0",
+    "pandas>=2.2.0",
+    "lxml>=5.3.0",
+    # === Vector / Embedding ===
+    "qdrant-client>=1.12.0",
+    # Semantic search over the local API directory (query_api_directory tool):
+    # bge-m3 dense + jieba BM25 + RRF over ~23k rows. Building the index encodes
+    # every row once — GPU strongly preferred (CPU ~55min vs ~4min on a 4090).
+    # `pip install torch` resolves to the CPU wheel; for GPU reinstall from the
+    # CUDA index: `pip install torch --index-url https://download.pytorch.org/whl/cu124`.
+    "sentence-transformers>=3.0.0",
+    "torch>=2.0.0",
+    "jieba>=0.42.1",
+    # === MCP (Model Context Protocol) ===
+    # Used by MCPRegistryAdapter to fan out to any MCP server (GitHub, Brave,
+    # arXiv, Wikipedia, fetch, …). The adapter degrades gracefully if this
+    # SDK or the underlying server (npx/uvx) is missing — so installation is
+    # effectively optional at runtime, but pinning it here makes a clean
+    # uv/pip install pull it in automatically.
+    "mcp>=1.0.0",
+    # === Auth ===
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    # === Utilities ===
+    "python-multipart>=0.0.18",
+    "orjson>=3.10.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-httpx>=0.34.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "pre-commit>=4.0.0",
+    "respx>=0.22.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "TCH"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

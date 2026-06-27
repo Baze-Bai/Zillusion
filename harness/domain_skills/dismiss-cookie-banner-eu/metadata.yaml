@@ -1,0 +1,14 @@
+title: Dismiss EU-style cookie banner
+description: |
+  Try a small list of known consent-management selectors and accessible
+  names to dismiss the GDPR / CCPA banner before any further interaction.
+when_to_use: |
+  First page load shows a cookie consent banner that may block clicks
+  or layout. Skip if no banner is present.
+evidence: |
+  Seed entry shipped with the library. Re-validate on each new site;
+  selectors evolve.
+sites_seen: []
+success_count: 0
+created_at: "2026-01-01T00:00:00+00:00"
+updated_at: "2026-01-01T00:00:00+00:00"

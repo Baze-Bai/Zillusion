@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 276 72" role="img" aria-labelledby="title desc">
+  <title id="title">Zillusion logo</title>
+  <desc id="desc">Zillusion wordmark with a data discovery logo mark.</desc>
+  <defs>
+    <linearGradient id="path-gradient" x1="14" y1="17" x2="51" y2="47" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#58C4FF"/>
+      <stop offset="0.52" stop-color="#7AF0C3"/>
+      <stop offset="1" stop-color="#FFD36A"/>
+    </linearGradient>
+    <linearGradient id="node-gradient" x1="16" y1="18" x2="50" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ECFEFF"/>
+      <stop offset="1" stop-color="#FFF7CC"/>
+    </linearGradient>
+    <filter id="soft-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.4" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.34 0 0 0 0 0.77 0 0 0 0 1 0 0 0 0.55 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <style>
+      .lens { stroke: #64748b; }
+      .handle { stroke: #475569; }
+      .word { fill: #0f172a; }
+      .sub { fill: #475569; }
+      @media (prefers-color-scheme: dark) {
+        .lens { stroke: #94a3b8; }
+        .handle { stroke: #cbd5e1; }
+        .word { fill: #f8fafc; }
+        .sub { fill: #94a3b8; }
+      }
+    </style>
+  </defs>
+  <g transform="translate(4 4)">
+    <path class="lens" d="M50.8 46.2 58 53.4" fill="none" stroke-width="5" stroke-linecap="round" opacity="0.55"/>
+    <path class="lens" d="M51 30.8c0 10.94-8.86 19.8-19.8 19.8S11.4 41.74 11.4 30.8 20.26 11 31.2 11c7.34 0 13.74 3.99 17.16 9.91" fill="none" stroke-width="4.4" stroke-linecap="round"/>
+    <path class="handle" d="M45.2 44.3 51 50.1" fill="none" stroke-width="2.2" stroke-linecap="round" opacity="0.55"/>
+    <path d="M18.5 21.5h26.7L22.8 42.8h24.7" fill="none" stroke="url(#path-gradient)" stroke-width="6.4" stroke-linecap="round" stroke-linejoin="round" filter="url(#soft-glow)"/>
+    <path d="M18.5 21.5h26.7L22.8 42.8h24.7" fill="none" stroke="#0f172a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.22"/>
+    <circle cx="18.5" cy="21.5" r="3.9" fill="url(#node-gradient)"/>
+    <circle cx="45.2" cy="21.5" r="3.9" fill="url(#node-gradient)"/>
+    <circle cx="22.8" cy="42.8" r="3.9" fill="url(#node-gradient)"/>
+    <circle cx="47.5" cy="42.8" r="3.9" fill="url(#node-gradient)"/>
+  </g>
+  <text class="word" x="82" y="35" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="25" font-weight="720">Zillusion</text>
+  <text class="sub" x="83" y="53" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="11" font-weight="600" letter-spacing="2.8">DISCOVERY AGENT</text>
+</svg>

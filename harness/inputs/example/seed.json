@@ -1,0 +1,21 @@
+{
+  "seed_url": "https://news.ycombinator.com/",
+  "page_tree": {
+    "root": {
+      "url_pattern": "https://news.ycombinator.com/",
+      "node_type": "list_page",
+      "is_sampled": true,
+      "fields_available": ["title", "url", "score", "author", "comment_count"],
+      "children": [
+        {
+          "url_pattern": "https://news.ycombinator.com/item?id={story_id}",
+          "node_type": "detail_page",
+          "is_sampled": false,
+          "fields_available": ["title", "comments[].author", "comments[].text"]
+        }
+      ],
+      "pagination": {"style": "next_link", "selector": "a.morelink"}
+    }
+  },
+  "notes": "Bundled example. Verify each branch before trusting it."
+}

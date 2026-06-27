@@ -1,0 +1,43 @@
+# ── Secrets / local config ──
+.env
+*/.env
+**/.env.local
+!.env.example
+!*/.env.example
+**/auth_state.json
+**/credentials.json
+**/credentials_needed.json
+**/settings.local.json
+
+# ── Python ──
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# ── Node / Next ──
+node_modules/
+.next/
+*.tsbuildinfo
+
+# ── Runtime data / generated artifacts ──
+backend/agent-workspace/
+harness/workspaces/*/
+!harness/workspaces/.gitkeep
+harness/run-logs/
+harness/inputs/*
+!harness/inputs/.gitkeep
+!harness/inputs/example
+*.sqlite
+*.sqlite-*
+*.db
+*.log
+
+# ── OS / editor ──
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

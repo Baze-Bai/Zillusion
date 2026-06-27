@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.env
+workspaces/*/
+!workspaces/.gitkeep
+# Login session state (live cookies/localStorage) — never commit, even if the
+# workspaces/*/ rule above is ever loosened.
+**/auth_state.json
+/media/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+# Runtime artifacts — generated per run, never committed (keep the example scaffold)
+inputs/*
+!inputs/example
+run-logs/
+_e2e_harness.log
+.claude/scheduled_tasks.lock
