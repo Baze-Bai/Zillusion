@@ -1,19 +1,41 @@
 # Zillusion — Data Source Discovery & Scraper-Building Agent
 
-Turn a plain-language data need into **either a vetted list of data sources or a
-working, validated scraper that produces a downloadable dataset** — driven by an
-LLM agent end to end.
+Turn a plain-language data need into **a vetted list of data sources, a working
+validated scraper, or a finished dataset** — driven by an LLM agent end to end.
 
-You ask *"where can I get data about X?"* → the agent discovers and ranks
-sources (APIs, files, embedded tables) → for any source you pick, it explores
-the site, **writes a runnable scraper**, validates it against the live page,
-runs it at full scale, and hands you the data.
+You ask *"where can I get data about X?"* and the agent runs the pipeline:
 
-> ⚠️ **Security model:** this ships configured for **single-tenant, localhost
-> use** (no built-in user accounts). Before exposing it on a network, read
+```
+discover → explore → validate → run → (data)
+```
+
+1. **Discover** — finds and ranks candidate sources (APIs, downloadable files,
+   embedded tables) from source registries + web search.
+2. **Explore** — for a source you pick, probes the site and writes a runnable
+   scraper (`workflow.py`).
+3. **Validate** — runs the scraper and checks its output against the live page.
+4. **Run** — executes the validated scraper at full scale → a downloadable dataset.
+5. **Data** *(optional, harness CLI)* — cleans the data and builds a data product
+   (report, chart, dataset).
+
+> ⚠️ **Security model:** ships configured for **single-tenant, localhost use**
+> (no built-in user accounts). Before exposing it on a network, read
 > [SECURITY.md](SECURITY.md).
 
----
+## Features
+
+- **End to end**: question → ranked sources → scraper → dataset.
+- **Three source types**: APIs, downloadable files, and embedded / HTML-table data.
+- **Real-time steering**: chat to guide or correct the agent mid-run.
+- **Human takeover**: login / captcha walls hand control to an embedded browser.
+- **Credentials gate**: keyed APIs prompt you for the key (never self-registered;
+  the key never leaves the backend).
+- **Emit-as-you-go**: long crawls stream results to disk; datasets are downloadable.
+- **Bring-your-own model**: DeepSeek, GLM (Zhipu), Claude, OpenAI, … via LiteLLM
+  routing; the agentic node uses the Claude Agent SDK over an Anthropic-compatible
+  endpoint.
+- **No search keys by default**: self-hosted SearXNG meta-search + free source
+  registries; optional commercial providers (Brave / Tavily / Exa) if you add keys.
 
 ## Three ways to use it
 
@@ -21,7 +43,7 @@ runs it at full scale, and hands you the data.
 |------|----------|--------------|--------|
 | **① Self-hosted web app** | Most users — full experience | `docker compose up`, browse `localhost:3000` | Heavy (full stack) |
 | **② Harness CLI** | Developers, scripting, CI | `python -m runtime.cli <cmd> <site>` | Medium |
-| **③ Claude Code skill** | Anyone already using Claude Code | drop `skills/find-and-scrape-data` into `.claude/skills/` | Light (near zero infra) |
+| **③ Claude Code skill** | Anyone already using Claude Code | drop `skills/find-and-scrape-data` into `.claude/skills/` | Light (near-zero infra) |
 
 All three share the same harness core. **You always bring your own LLM API key**
 (DeepSeek / GLM / Claude / OpenAI / …) — none is bundled.
@@ -30,51 +52,78 @@ All three share the same harness core. **You always bring your own LLM API key**
 
 ## ① Self-hosted web app (quickstart)
 
-**Requirements:** Docker + Docker Compose, and at least one LLM provider API key.
+**Prerequisites:** Docker + Docker Compose, and at least one LLM provider API key.
 
 ```bash
 git clone <your-repo-url> zillusion && cd zillusion
 
 # 1. Compose-level config
 cp .env.example .env
-#    set SEARXNG_SECRET (openssl rand -hex 32) in .env
+#    set SEARXNG_SECRET   (openssl rand -hex 32)
 
-# 2. App / LLM config — put your provider key(s) here
+# 2. App / LLM config
 cp backend/.env.example backend/.env
-#    fill ANTHROPIC_API_KEY / DEEPSEEK_API_KEY / ZAI_API_KEY / ... as needed
-
-# 3. Bring up the core stack (postgres + redis + searxng + backend + frontend)
-docker compose up --build
-
-# open http://localhost:3000
 ```
 
-Optional add-ons:
+**Pick your LLM provider in `backend/.env`.** The template defaults to Claude:
+
+- **Claude** — just set `ANTHROPIC_API_KEY`. Done.
+- **DeepSeek / GLM / other** — set the key **and** repoint the model fields, or
+  the agent will call Claude models your key can't serve:
+
+  ```bash
+  # DeepSeek
+  DEEPSEEK_API_KEY=sk-...
+  LLM_PRIMARY_REASONING=deepseek/deepseek-v4-pro
+  LLM_PRIMARY_STRONG=deepseek/deepseek-v4-pro
+  LLM_PRIMARY_FAST=deepseek/deepseek-v4-flash
+  # GLM:  ZAI_API_KEY=...  with  LLM_PRIMARY_*=zai/glm-4.7 , zai/glm-4.5-flash
+  ```
+
+Bring up the stack, verify, use:
 
 ```bash
-docker compose --profile embeddings up   # + qdrant (semantic dedup)
+docker compose up --build                  # postgres + redis + searxng + backend + frontend
+curl http://localhost:8000/api/v1/health   # -> {"status":"ok", ...}
+# open http://localhost:3000
+docker compose down                        # stop (add -v to also drop db volumes)
 ```
 
-**Page scraping (Firecrawl)** is not bundled. Either point the backend at
-Firecrawl Cloud (`SEARCH_FIRECRAWL_USE_SELF_HOSTED=false` +
-`SEARCH_FIRECRAWL_API_KEY` in `backend/.env`) or run Firecrawl yourself and set
-`SEARCH_FIRECRAWL_SELF_HOSTED_URL`.
+Optional add-on:
+
+```bash
+docker compose --profile embeddings up     # + qdrant (semantic dedup)
+```
+
+**Page scraping (Firecrawl)** is not bundled. Point the backend at Firecrawl
+Cloud (`SEARCH_FIRECRAWL_USE_SELF_HOSTED=false` + `SEARCH_FIRECRAWL_API_KEY`) or
+self-host it and set `SEARCH_FIRECRAWL_SELF_HOSTED_URL`. Without it, page fetch
+falls back to jina / httpx.
 
 **In the browser:** type a data question → pick sources from the ranked report →
-**Build scrapers** → **Run** → download the dataset. You can steer the agent in
-the chat at any time; login/captcha walls hand control to an embedded browser.
+**Build scrapers** → **Run** → download the dataset. Steer the agent in chat at
+any time; login / captcha walls hand control to an embedded browser.
 
-How sources are searched and fetched (registry APIs + self-hosted SearXNG, no
-search keys needed by default): see [docs/discovery-architecture.md](docs/discovery-architecture.md).
+→ How sources are searched and fetched:
+[docs/discovery-architecture.md](docs/discovery-architecture.md).
 
 ---
 
 ## ② Harness CLI (headless / scripting)
 
-Drive a single site without the web UI:
+Drive a single site without the web UI. **One-time setup** (its own venv):
 
 ```bash
 cd harness
+python -m venv .venv && . .venv/bin/activate    # Windows: .\.venv\Scripts\Activate.ps1
+pip install -e .
+playwright install chromium                     # for JS-rendered sites
+# export your LLM key + models in the environment (same vars as backend/.env)
+```
+
+Then:
+
+```bash
 python -m runtime.cli explore  <site_id>   # explore a site
 python -m runtime.cli loop     <site_id>   # explore -> validate loop
 python -m runtime.cli validate <site_id>
@@ -83,38 +132,92 @@ python -m runtime.cli crawl    <site_id>   # agentic crawl (dynamic sites)
 python -m runtime.cli data     <site_id>   # build a data product
 ```
 
-Outputs land in `harness/workspaces/<site_id>/` (`workflow.py` + data).
-See [harness/README.md](harness/README.md).
+Put a site's `goal.md` + `seed.json` under `harness/inputs/<site_id>/` (see
+`harness/inputs/example/`). Outputs land in `harness/workspaces/<site_id>/`.
+More: [harness/README.md](harness/README.md).
 
 ---
 
 ## ③ Claude Code skill (zero infra)
 
-If you already use Claude Code, copy the skill into your project and just ask:
+If you already use Claude Code, copy the skill in and just ask:
 
 ```bash
 cp -r skills/find-and-scrape-data <your-project>/.claude/skills/
 pip install -r skills/find-and-scrape-data/scripts/requirements.txt   # optional helpers
 ```
 
-Then in Claude Code: *"find data sources for <topic>"* or *"scrape <url> and
-build me a scraper"*. The skill bundles a Markdown playbook plus small,
-dependency-light helper scripts the agent runs directly — no backend, no
-Firecrawl/SearXNG, no separate keys.
+Then in Claude Code: *"find data sources for `<topic>`"* or *"scrape `<url>` and
+build me a scraper"*. It runs with no backend, no Firecrawl / SearXNG, and no
+separate keys — using your own Claude. Full guide:
+[skills/find-and-scrape-data/README.md](skills/find-and-scrape-data/README.md).
 
 ---
+
+## Architecture
+
+```
+                 frontend (Next.js)
+                        │  SSE / REST
+                        ▼
+   backend (FastAPI) ───┬── discovery pipeline (LangGraph + agentic super-node)
+                        ├── judging / ranking
+                        ├── source adapters  +  search (SearXNG, …)
+                        └── harness orchestrator ──► harness (Claude Agent SDK)
+                                                     explore→validate→run→crawl→data
+
+   infra: postgres (sessions/events) · redis (cache/limits) · searxng (search)
+          · qdrant (optional, dedup) · firecrawl (optional, bring-your-own)
+```
+
+The backend's discovery pipeline finds + ranks sources; the **discovery→harness
+bridge** (`scripts/discovery_to_harness.py`) stages chosen sources into the
+harness, which builds, validates, and runs the scraper. Full design:
+[docs/DATASOURCE_DISCOVERY_AGENT_DOC.md](docs/DATASOURCE_DISCOVERY_AGENT_DOC.md),
+[docs/UNIFIED_DATA_SOURCE_DISCOVERY_AGENT.md](docs/UNIFIED_DATA_SOURCE_DISCOVERY_AGENT.md).
 
 ## Repository layout
 
 ```
-backend/    FastAPI: discovery pipeline + harness orchestration + web API
-frontend/   Next.js conversational web UI
-harness/    Claude Agent SDK runtime: explore / validate / run / crawl / data
-skills/     find-and-scrape-data — Markdown playbook + helper scripts (form ③)
-scripts/    discovery → harness bridge
-searxng/    SearXNG config
-docs/        architecture & model-config notes
+backend/                  FastAPI service
+  src/agents/             discovery pipeline: LangGraph nodes + agentic super-node
+  src/judging/            multi-dimensional source scoring + veto
+  src/adapters/           source registries (academic/datasets/government/code/geo)
+  src/classifiers/        URL / type / portal classification
+  src/tools/              search (searxng/brave/tavily/exa) + scraping + validation
+  src/services/           orchestration, event store, run registry, CDP bridge, …
+  src/api/                routes + middleware + SSE
+  src/db/ , src/models/   persistence + schemas
+  tests/                  unit tests
+frontend/                 Next.js conversational UI  (src/{app,components,hooks,state})
+harness/                  Claude Agent SDK runtime
+  runtime/                explore / validate / run / crawl / data agents + CLI
+  mcp_server/             browser / workspace / vision tools
+  .claude/ domain_skills/ agent config + cross-site skills
+skills/                   find-and-scrape-data — Claude Code skill (form ③)
+scripts/                  discovery → harness bridge
+searxng/                  self-hosted SearXNG config
+docs/                     architecture docs
+docker-compose.yml        the self-hosted stack
+.env.example, backend/.env.example   config templates (copy to .env)
 ```
+
+## Development
+
+```bash
+# backend test suite
+cd backend && pip install -e ".[dev]" && pytest
+# harness test suite
+cd harness  && pip install -e .         && pytest
+```
+
+## Documentation
+
+- [docs/discovery-architecture.md](docs/discovery-architecture.md) — how sources are searched & fetched
+- [docs/DATASOURCE_DISCOVERY_AGENT_DOC.md](docs/DATASOURCE_DISCOVERY_AGENT_DOC.md) — full technical reference
+- [docs/UNIFIED_DATA_SOURCE_DISCOVERY_AGENT.md](docs/UNIFIED_DATA_SOURCE_DISCOVERY_AGENT.md) — architecture design
+- [SECURITY.md](SECURITY.md) — deployment & security model
+- [harness/README.md](harness/README.md) · [skills/find-and-scrape-data/README.md](skills/find-and-scrape-data/README.md)
 
 ## License
 
