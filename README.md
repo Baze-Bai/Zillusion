@@ -64,6 +64,9 @@ Firecrawl Cloud (`SEARCH_FIRECRAWL_USE_SELF_HOSTED=false` +
 **Build scrapers** → **Run** → download the dataset. You can steer the agent in
 the chat at any time; login/captcha walls hand control to an embedded browser.
 
+How sources are searched and fetched (registry APIs + self-hosted SearXNG, no
+search keys needed by default): see [docs/discovery-architecture.md](docs/discovery-architecture.md).
+
 ---
 
 ## ② Harness CLI (headless / scripting)
