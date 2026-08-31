@@ -124,3 +124,120 @@ def test_api_type_hint_and_credentials_note(tmp_path):
     assert meta["workflow_type_hint"] == "api"
     doc = (vdir / "WORKFLOW_DOC.md").read_text(encoding="utf-8")
     assert "credentials.json" in doc
+
+
+# ── agentic route (2026-08-31) ──────────────────────────────────────────────
+# Until this landed, an agentic site left NO version behind: the archiver took
+# workspaces/<site>/workflow.py unconditionally and returned None when it was
+# absent, which is every agentic loop. These pin the recipe generalization.
+
+
+def _mk_agentic_site(root, site_id, *, brief="# Crawl brief\nHarvest every listing.\n", run=None):
+    """A site whose route ended `agentic`: a crawl_brief, no workflow.py, and
+    (optionally) a finished crawl under runs/<run_id>/output.json."""
+    ws = root / "workspaces" / site_id
+    ws.mkdir(parents=True, exist_ok=True)
+    inputs = root / "inputs" / site_id
+    inputs.mkdir(parents=True, exist_ok=True)
+    (ws / "crawl_brief.md").write_text(brief, encoding="utf-8")
+    (inputs / "goal.md").write_text("# 目标\n抓取全部房源。\n", encoding="utf-8")
+    (inputs / "seed.json").write_text(
+        json.dumps({"url": "https://listings.example.com"}), encoding="utf-8"
+    )
+    if run is not None:
+        run_id, payload = run
+        rd = ws / "runs" / run_id
+        rd.mkdir(parents=True, exist_ok=True)
+        (rd / "output.json").write_text(payload, encoding="utf-8")
+    return ws
+
+
+def test_agentic_brief_is_archived(tmp_path):
+    _mk_agentic_site(tmp_path, "listings-1")
+    vdir = save_workflow_version("listings-1", verdict="PASS", root=tmp_path)
+    assert vdir is not None, "an agentic loop must leave a version behind"
+    assert (vdir / "crawl_brief.md").is_file()
+    assert not (vdir / "workflow.py").exists()
+    meta = json.loads((vdir / "meta.json").read_text(encoding="utf-8"))
+    assert meta["recipe_kind"] == "crawl_brief"
+    assert meta["recipe_file"] == "crawl_brief.md"
+    assert meta["workflow_type_hint"] == "agentic"
+    # No script here, so nothing may present itself as one.
+    assert "workflow_sha256" not in meta
+
+
+def test_agentic_doc_documents_the_resume_command(tmp_path):
+    _mk_agentic_site(tmp_path, "listings-2", run=("run-abc123", '[{"a": 1}]'))
+    vdir = save_workflow_version(
+        "listings-2", verdict="PASS", root=tmp_path, run_id="run-abc123"
+    )
+    doc = (vdir / "WORKFLOW_DOC.md").read_text(encoding="utf-8")
+    assert "runtime.cli crawl listings-2" in doc
+    assert "--run-id run-abc123" in doc
+    assert "从零重抓整站" in doc  # the omitted-run-id warning must be stated
+    assert "runtime.cli run" not in doc  # the deterministic command is wrong here
+    # The dispatched run's output is the agentic sample.
+    assert json.loads((vdir / "output_sample.json").read_text(encoding="utf-8")) == [{"a": 1}]
+
+
+def test_agentic_sample_falls_back_to_newest_run(tmp_path):
+    _mk_agentic_site(tmp_path, "listings-3", run=("run-only", '[{"b": 2}]'))
+    vdir = save_workflow_version("listings-3", verdict="PASS", root=tmp_path)  # no run_id
+    assert json.loads((vdir / "output_sample.json").read_text(encoding="utf-8")) == [{"b": 2}]
+
+
+def test_agentic_without_a_finished_run_still_archives(tmp_path):
+    _mk_agentic_site(tmp_path, "listings-4")  # crawl died before finalize
+    vdir = save_workflow_version("listings-4", verdict="INCONCLUSIVE", root=tmp_path)
+    assert vdir is not None
+    assert (vdir / "crawl_brief.md").is_file()
+    assert not (vdir / "output_sample.json").exists()
+
+
+def test_agentic_dedup_records_revalidation(tmp_path):
+    _mk_agentic_site(tmp_path, "listings-5")
+    v1 = save_workflow_version("listings-5", verdict="INCONCLUSIVE", root=tmp_path)
+    v2 = save_workflow_version("listings-5", verdict="PASS", root=tmp_path)
+    assert v1 == v2
+    meta = json.loads((v1 / "meta.json").read_text(encoding="utf-8"))
+    assert [r["verdict"] for r in meta["revalidations"]] == ["PASS"]
+
+
+def test_switching_route_mints_a_new_version(tmp_path):
+    """A site that moves deterministic → agentic has a different recipe even
+    though the archive directory is shared; kind is part of the dedup key."""
+    ws = _mk_site(tmp_path, "switcher")
+    save_workflow_version("switcher", verdict="FAIL", root=tmp_path)
+    (ws / "workflow.py").unlink()
+    (ws / "crawl_brief.md").write_text("# Crawl brief\nToo dynamic for a script.\n", encoding="utf-8")
+    v2 = save_workflow_version("switcher", verdict="PASS", root=tmp_path)
+    versions = sorted((tmp_path / "workspaces" / "switcher" / "workflow_versions").iterdir())
+    assert len(versions) == 2
+    assert json.loads((v2 / "meta.json").read_text(encoding="utf-8"))["recipe_kind"] == "crawl_brief"
+
+
+# ── deterministic sidecars ──────────────────────────────────────────────────
+# The api recipe IS api_manifest.yaml; workflow.py is the shell that reads it.
+# Archiving the shell alone produced a version nobody could replay.
+
+
+def test_sidecars_ride_along(tmp_path):
+    ws = _mk_site(tmp_path, "acme-side")
+    (ws / "selectors.yaml").write_text("title: h1\n", encoding="utf-8")
+    (ws / "helpers.py").write_text("def h():\n    return 1\n", encoding="utf-8")
+    (ws / "api_manifest.yaml").write_text("endpoints: []\n", encoding="utf-8")
+    vdir = save_workflow_version("acme-side", verdict="PASS", root=tmp_path)
+    for name in ("selectors.yaml", "helpers.py", "api_manifest.yaml"):
+        assert (vdir / name).is_file(), f"{name} must be archived with the workflow"
+    meta = json.loads((vdir / "meta.json").read_text(encoding="utf-8"))
+    assert set(meta["sidecars"]) == {"selectors.yaml", "helpers.py", "api_manifest.yaml"}
+    assert "download_manifest.yaml" not in meta["sidecars"]  # absent → not claimed
+
+
+def test_inline_route_archives_nothing(tmp_path):
+    """Inline harvested the whole set during explore: its deliverable under
+    runs/ IS the artifact and there is no recipe to version."""
+    ws = tmp_path / "workspaces" / "inline-site"
+    (ws / "runs" / "run-x").mkdir(parents=True)
+    (ws / "runs" / "run-x" / "output.json").write_text("[]", encoding="utf-8")
+    assert save_workflow_version("inline-site", verdict="PASS", root=tmp_path) is None

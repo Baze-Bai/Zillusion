@@ -911,6 +911,10 @@ async def explore_until_pass(
             iterations_run=len(summary.iterations),
             total_cost_usd=summary.total_cost_usd,
             model=model,
+            # Agentic dispatch only: names the crawl this loop ran, so the
+            # archived doc can print a resume command instead of leaving the
+            # reader to dig the id out of runs/.
+            run_id=summary.crawl_run_id,
         )
     except Exception:  # noqa: BLE001
         workflow_version_dir = None
