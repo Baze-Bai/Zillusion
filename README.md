@@ -116,7 +116,7 @@ Drive a single site without the web UI. **One-time setup** (its own venv):
 ```bash
 cd harness
 python -m venv .venv && . .venv/bin/activate    # Windows: .\.venv\Scripts\Activate.ps1
-pip install -e .
+pip install -c constraints.txt -e .             # -c pins the resolved dependency set
 playwright install chromium                     # for JS-rendered sites
 # export your LLM key + models in the environment (same vars as backend/.env)
 ```
@@ -206,9 +206,9 @@ docker-compose.yml        the self-hosted stack
 
 ```bash
 # backend test suite
-cd backend && pip install -e ".[dev]" && pytest
+cd backend && pip install -c constraints.txt -e ".[dev]" && pytest
 # harness test suite
-cd harness  && pip install -e .         && pytest
+cd harness  && pip install -c constraints.txt -e .         && pytest
 ```
 
 ## Documentation

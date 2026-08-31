@@ -6,8 +6,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml ./
-RUN pip install --no-cache-dir -e ".[dev]" 2>/dev/null || pip install --no-cache-dir .
+COPY pyproject.toml constraints.txt ./
+# -c constraints.txt: pyproject pins only floors, so an unconstrained build
+# resolves against PyPI-of-the-day and can drift into a breaking major between
+# two builds of the same commit. constraints.txt is the resolved set for this
+# image's platform; regenerate it (see its header) when pyproject changes.
+RUN pip install --no-cache-dir -c constraints.txt -e ".[dev]" 2>/dev/null \
+    || pip install --no-cache-dir -c constraints.txt .
 
 COPY . .
 
