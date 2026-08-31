@@ -4,7 +4,7 @@ Turn a plain-language data need into **a vetted list of data sources, a working
 validated scraper, or a finished dataset** — driven by an LLM agent end to end.
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](#quickstart)
+![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)
 [![Stars](https://img.shields.io/github/stars/Baze-Bai/Zillusion?style=social)](https://github.com/Baze-Bai/Zillusion/stargazers)
 
 ![Zillusion demo](docs/demo.gif)
