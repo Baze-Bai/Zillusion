@@ -13,11 +13,18 @@ upstream code doesn't depend on the SDK's internal types.
 
 from __future__ import annotations
 
-import sys
 import traceback
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any, AsyncIterator
+
+if TYPE_CHECKING:
+    # `steer_queue` is annotated "asyncio.Queue | None". Under
+    # `from __future__ import annotations` that string is never evaluated, so the
+    # module ran fine without the import — but the name was genuinely undefined
+    # for anything that DOES read annotations (a type checker, or ruff's F821).
+    # Importing it here keeps the runtime import graph unchanged.
+    import asyncio
 
 try:
     from claude_agent_sdk import (

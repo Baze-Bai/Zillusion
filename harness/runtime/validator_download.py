@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from runtime.validator_checks import PROJECT_ROOT, _workspace
+from runtime.validator_checks import _workspace
 
 
 # Leading magic bytes for binary/container formats.
