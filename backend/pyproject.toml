@@ -63,7 +63,11 @@ dependencies = [
     # SDK or the underlying server (npx/uvx) is missing — so installation is
     # effectively optional at runtime, but pinning it here makes a clean
     # uv/pip install pull it in automatically.
-    "mcp>=1.0.0",
+    # Capped below 2 for the same reason the harness caps it: the 1.x client
+    # names (`mcp.client.streamable_http.streamablehttp_client`) were renamed in
+    # 2.0, and the defensive import around them turns the HTTP transport off
+    # silently rather than failing loudly. Bump both together with a port.
+    "mcp>=1.0.0,<2",
     # === Auth ===
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",

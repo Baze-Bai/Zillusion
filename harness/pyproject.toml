@@ -4,7 +4,14 @@ version = "0.1.0"
 description = "Browser-driven crawler exploration (harness variant) with cross-site skill accumulation"
 requires-python = ">=3.12"
 dependencies = [
-    "mcp>=1.0.0",
+    # Capped below 2. mcp_server/server.py is written against the 1.x
+    # `mcp.server.fastmcp` API, which mcp 2.0.0 removed (FastMCP -> MCPServer).
+    # Without the cap a fresh `pip install -e .` resolves mcp 2.x today and
+    # `import mcp_server.server` dies, which means the Claude Code session comes
+    # up with the browser-harness MCP server reported `failed` and the agent has
+    # ZERO browser tools — it does not crash, it silently cannot see anything.
+    # Lift this only together with a port of server.py to the 2.x API.
+    "mcp>=1.0.0,<2",
     "playwright>=1.49.0",
     "pydantic>=2.10.0",
     "pyyaml>=6.0.2",
