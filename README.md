@@ -65,6 +65,49 @@ discover → explore → validate → run → (data)
 - **No search keys by default**: self-hosted SearXNG meta-search + free source
   registries; optional commercial providers (Brave / Tavily / Exa) if you add keys.
 
+## Responsible use — what this does and does not do for you
+
+This is a research and personal-use tool. It drives a real browser against real
+sites on your behalf, from your machine, under your IP. **You are responsible
+for what you point it at**, and the list below is exact rather than reassuring,
+because a compliance claim that does not survive a reader opening the source is
+worse than no claim.
+
+**It does not honour `robots.txt`.** There is no robots parsing or enforcement
+anywhere on the crawl path. If a site's `robots.txt` matters to you — legally,
+contractually, or ethically — you have to check it yourself, before you run.
+
+**Crawl-side request pacing is whatever the generated scraper happens to do.**
+No global rate limiter, no politeness delay, no per-host concurrency cap governs
+the crawl. A generated `workflow.py` paces itself only if the agent wrote pacing
+into it. Point this at a small site and it can hit it harder than a human ever
+would — which is both rude and the fastest way to get your IP blocked. The
+`rate_limit` field on an API manifest is prose the agent *records*, not a limit
+anything enforces.
+
+**Discovery-side lookups are rate-limited**, because those talk to APIs with
+published limits: the registry adapters carry per-adapter ceilings (1–10 req/s
+depending on the source) and the fan-out shares a concurrency semaphore. That is
+the one place where limits are real, and it is not the part that crawls a target
+site.
+
+**It never signs up for anything as you.** When a source needs an API key, the
+run stops and asks you to write it into `inputs/<site>/credentials.json`
+yourself; the agent has no account-creation path and is blocked from reading
+that file back.
+
+**Login walls and CAPTCHAs are handed to a human, not solved.** The one
+supported route past an auth wall is `browser_request_user_login`, which opens a
+browser for *you* to log in; there is no CAPTCHA solver and DIY login scripting
+is explicitly out of bounds for the agent. That is a deliberate limit, not an
+oversight — but note the consequence: logging in makes the session yours, and
+whatever the site's terms say about automated access then applies to your
+account.
+
+Some of the above is present in the commercial hosted build and not here — the
+robots policy layer in particular. If you need that, it is not in this
+repository today; say so in an issue and it can be prioritised.
+
 ## Three ways to use it
 
 | Form | For whom | What you run | Weight |
