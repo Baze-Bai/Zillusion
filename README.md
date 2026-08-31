@@ -3,6 +3,34 @@
 Turn a plain-language data need into **a vetted list of data sources, a working
 validated scraper, or a finished dataset** — driven by an LLM agent end to end.
 
+[![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](#quickstart)
+[![Stars](https://img.shields.io/github/stars/Baze-Bai/Zillusion?style=social)](https://github.com/Baze-Bai/Zillusion/stargazers)
+
+![Zillusion demo](docs/demo.gif)
+
+*One sentence in — "global CO2 emissions by country" — and it ranks 13 real sources
+on 5 dimensions, builds a scraper for the one you pick, validates it, and runs it to
+a downloadable dataset. Real capture; the address bar says `127.0.0.1` because that
+is where this runs.*
+
+## Why this and not a crawler
+
+Finding the **right** source is the hard part, and the scraper you write breaks on
+the next redesign. Two things here exist to attack exactly that, and they are the
+parts worth stealing even if you use something else:
+
+- **The validator cannot rubber-stamp its own work.** A scraper is graded by a
+  *separate, read-only* agent session that physically cannot edit the workflow it is
+  judging. Its sharpest check re-reads the **live page** to confirm each field means
+  what the selector claims — the failure it catches is a selector quietly bound to
+  upvotes instead of comments. The verdict is computed from a scorecard, not argued
+  by the model.
+- **Anti-bot knowledge accumulates instead of being rediscovered.** Real, dated
+  notes — CDN signature URLs, fresh-context fingerprinting, soft login gates,
+  hydration traps — persist across runs and are promoted to cross-site skills once a
+  pattern repeats. Most tools relearn every block from zero on every run.
+
 You ask *"where can I get data about X?"* and the agent runs the pipeline:
 
 ```
@@ -218,6 +246,12 @@ cd harness  && pip install -c constraints.txt -e .         && pytest
 - [docs/UNIFIED_DATA_SOURCE_DISCOVERY_AGENT.md](docs/UNIFIED_DATA_SOURCE_DISCOVERY_AGENT.md) — architecture design
 - [SECURITY.md](SECURITY.md) — deployment & security model
 - [harness/README.md](harness/README.md) · [skills/find-and-scrape-data/README.md](skills/find-and-scrape-data/README.md)
+
+## Contributing
+
+Issues and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The single most
+useful thing you can send is **a site that defeated it**: which site, what you
+asked for, and which stage gave up.
 
 ## License
 
