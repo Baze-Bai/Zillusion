@@ -13,9 +13,10 @@ broken patterns here.
 
 Safety:
   * Default is DRY-RUN — prints exactly what WOULD change, writes nothing.
-  * `--apply` first copies the whole domain-skills/ tree to
-    D:\\Zillusion_backups\\domain-skills-<ts>\\ (cross-disk, E: is full), THEN
-    rewrites in place.
+  * `--apply` first copies the whole domain-skills/ tree to a timestamped
+    backup directory, THEN rewrites in place. The backup parent defaults to
+    `<repo>/.skill-backups/` and is overridable with `--backup-parent` —
+    point it at another disk if this one is tight.
   * Block-level surgery: deleted patterns drop their whole `## Pattern` block;
     survivors keep notes/regex/types/evidence_count byte-for-byte minus the
     stripped lines. The frontmatter + intro are preserved verbatim.
@@ -36,7 +37,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 DEFAULT_ROOT = Path(__file__).resolve().parent.parent / "agent-workspace" / "domain-skills"
-DEFAULT_BACKUP_PARENT = Path(r"D:\Zillusion_backups")
+# In-repo and gitignored, so it works on any machine. Override with
+# --backup-parent to put the copy on another disk.
+DEFAULT_BACKUP_PARENT = Path(__file__).resolve().parent.parent.parent / ".skill-backups"
 
 _PATTERN_HEADER_RE = re.compile(r"^##\s+Pattern:\s*(.+?)\s*$", re.MULTILINE)
 _STRIP_FIELDS = ("confidence", "success_count", "failure_count", "consecutive_failures")
@@ -112,6 +115,11 @@ def _plan_file(path: Path) -> dict:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Normalize (purge broken) the domain-skills library.")
     ap.add_argument("--root", default=str(DEFAULT_ROOT))
+    ap.add_argument(
+        "--backup-parent",
+        default=str(DEFAULT_BACKUP_PARENT),
+        help=f"where --apply writes its pre-write copy (default: {DEFAULT_BACKUP_PARENT})",
+    )
     ap.add_argument("--apply", action="store_true", help="back up + write (default is dry-run)")
     ap.add_argument(
         "--no-backup", action="store_true", help="skip the safety backup (irreversible)"
@@ -158,8 +166,9 @@ def main(argv: list[str] | None = None) -> int:
     backup = None
     if not args.no_backup:
         ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-        backup = DEFAULT_BACKUP_PARENT / f"domain-skills-{ts}"
-        DEFAULT_BACKUP_PARENT.mkdir(parents=True, exist_ok=True)
+        backup_parent = Path(args.backup_parent)
+        backup = backup_parent / f"domain-skills-{ts}"
+        backup_parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(root, backup)
         print(f"\n[backup] {root}  →  {backup}")
     else:

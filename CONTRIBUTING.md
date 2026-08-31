@@ -31,8 +31,9 @@ If you got past a block yourself, that is even better: see *Anti-bot notes* belo
 ## Before opening a pull request
 
 ```bash
-cd backend && pip install -c constraints.txt -e ".[dev]" && pytest
-cd harness  && pip install -c constraints.txt -e .        && pytest
+# each line runs from the repo root; the subshell keeps `cd` from leaking
+(cd backend && pip install -c constraints.txt -e ".[dev]" && pytest)
+(cd harness  && pip install -c constraints.txt -e .        && pytest)
 ```
 
 The `-c constraints.txt` is not optional: the pyprojects declare only lower bounds,

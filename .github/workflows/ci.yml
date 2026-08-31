@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Deliberately narrow. This gates ONE thing — the harness lint rule set that
+# harness/pyproject.toml pins — and says plainly what it does not gate, because
+# a green check that implies more coverage than it has is worse than no check.
+#
+# Not gated here, and why:
+#
+#   * The test suites. The harness suite has a standing set of failures that
+#     are environmental rather than defects: tests asserting Windows-style
+#     paths, and browser tests needing a `playwright install` this job does not
+#     run. Gating on a suite that is red for reasons unrelated to the change
+#     under review teaches everyone to ignore the red light. Fix those two
+#     families first, then add the suites.
+#
+#   * backend lint. backend/pyproject.toml selects a much broader rule set
+#     (E, F, I, N, W, UP, B, SIM, TCH) than harness does, and it has never been
+#     enforced — a clean run today reports 329 findings, 171 of them E501 line
+#     lengths. Turning that on is a real cleanup, not a config line, and it
+#     wants the backend suite runnable first so the sweep can be verified.
+jobs:
+  harness-lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: harness
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Pinned: ruff's default rule set is the tool's to change, and it did —
+      # 0.16 broadened the defaults and turned an unmodified tree red. The
+      # pyproject now states its own `select`, so this pin is belt-and-braces
+      # rather than load-bearing; it keeps a ruff release from moving the
+      # goalposts in the middle of a review.
+      - run: pip install "ruff==0.16.5"
+      - run: ruff check runtime mcp_server

@@ -82,6 +82,13 @@ All three share the same harness core. **You always bring your own LLM API key**
 
 **Prerequisites:** Docker + Docker Compose, and at least one LLM provider API key.
 
+> **This compose stack runs in development mode**, on purpose — the frontend
+> serves through `next dev` and the backend runs uvicorn with `--reload`, so
+> editing the source updates a running stack. That is what you want on the
+> localhost install this ships as; it is *not* a production deployment, and
+> combined with the single-tenant security model in [SECURITY.md](SECURITY.md)
+> it should not be exposed to a network as-is.
+
 ```bash
 git clone <your-repo-url> zillusion && cd zillusion
 
@@ -152,8 +159,8 @@ playwright install chromium                     # for JS-rendered sites
 Then:
 
 ```bash
-python -m runtime.cli explore  <site_id>   # explore a site
-python -m runtime.cli loop     <site_id>   # explore -> validate loop
+python -m runtime.cli explore      <site_id>   # explore a site
+python -m runtime.cli explore-loop <site_id>   # explore -> validate loop
 python -m runtime.cli validate <site_id>
 python -m runtime.cli run      <site_id>   # full production crawl
 python -m runtime.cli crawl    <site_id>   # agentic crawl (dynamic sites)
@@ -233,17 +240,17 @@ docker-compose.yml        the self-hosted stack
 ## Development
 
 ```bash
-# backend test suite
-cd backend && pip install -c constraints.txt -e ".[dev]" && pytest
+# backend test suite  (each line runs from the repo root)
+(cd backend && pip install -c constraints.txt -e ".[dev]" && pytest)
 # harness test suite
-cd harness  && pip install -c constraints.txt -e .         && pytest
+(cd harness  && pip install -c constraints.txt -e .        && pytest)
 ```
 
 ## Documentation
 
 - [docs/discovery-architecture.md](docs/discovery-architecture.md) — how sources are searched & fetched
-- [docs/DATASOURCE_DISCOVERY_AGENT_DOC.md](docs/DATASOURCE_DISCOVERY_AGENT_DOC.md) — full technical reference
-- [docs/UNIFIED_DATA_SOURCE_DISCOVERY_AGENT.md](docs/UNIFIED_DATA_SOURCE_DISCOVERY_AGENT.md) — architecture design
+- [docs/DATASOURCE_DISCOVERY_AGENT_DOC.md](docs/DATASOURCE_DISCOVERY_AGENT_DOC.md) — full technical reference **(written in Chinese)**
+- [docs/UNIFIED_DATA_SOURCE_DISCOVERY_AGENT.md](docs/UNIFIED_DATA_SOURCE_DISCOVERY_AGENT.md) — architecture design **(written in Chinese)**
 - [SECURITY.md](SECURITY.md) — deployment & security model
 - [harness/README.md](harness/README.md) · [skills/find-and-scrape-data/README.md](skills/find-and-scrape-data/README.md)
 

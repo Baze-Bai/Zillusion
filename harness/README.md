@@ -5,9 +5,9 @@
 **Learning**: per-site `helpers.py` (append-only) + cross-site `memory/`
 + cross-site `domain_skills/` + project-scoped `.claude/skills/`.
 
-The heavier Claude-Code-driven variant. The lighter counterpart,
-[`claude-code-playwright`](../claude-code-playwright), strips the skill
-library and uses Playwright high-level API as the primary surface.
+The Claude-Code-driven crawler harness: the agent probes a site through a CDP-first
+browser surface, writes the scraper, and accumulates what it learns in a skill
+library that carries across sites.
 
 ## How it fits together
 
@@ -44,9 +44,13 @@ harness/
   .claude/
     commands/
       explore.md
-    skills/
+    skills/                      (run `ls .claude/skills` for the current set)
       hypothesis-loop/SKILL.md   how to run the loop
       browser-probe/SKILL.md     CDP-first probe patterns
+      api-probe/SKILL.md         probing an HTTP API, browserless
+      validate-workflow/SKILL.md run + grade workflow.py before DONE
+      agentic-crawl/SKILL.md     the no-script harvesting route
+      data-product/SKILL.md      cleaning + building products from a dataset
       skill-curator/SKILL.md     when to promote / prune
   mcp_server/
     __init__.py
@@ -70,7 +74,7 @@ harness/
 | `helpers.py` append-only | no | yes |
 | Cross-site skill library | no | yes (`skill_*` tools + `domain_skills/`) |
 | Cross-site memory | yes | yes |
-| `.claude/skills/` (project-scoped) | 2 skills | 3 skills (adds `skill-curator`) |
+| `.claude/skills/` (project-scoped) | the crawl skills | **same**, plus `skill-curator` |
 | Bundled seed skill | no | yes (`dismiss-cookie-banner-eu`) |
 
 ## Setup
@@ -79,7 +83,7 @@ harness/
 # from this folder
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -e .
+pip install -c constraints.txt -e .
 playwright install chromium
 ```
 
@@ -92,7 +96,10 @@ claw prompt "/explore example"
 
 # or programmatic / cloud (Claude Agent SDK, non-interactive)
 python -m runtime.cli explore example
-python -m runtime.cli explore example --json     # one JSON event per line
+python -m runtime.cli --json explore example     # one JSON event per line
+                                                 # (--json/--quiet/--model/--max-turns/
+                                                 #  --vision/--permission-mode are GLOBAL:
+                                                 #  they go BEFORE the subcommand)
 ```
 
 The `runtime/` package replaces the `claude` CLI for cloud deployments
@@ -141,7 +148,7 @@ drives it.
 `claude` is a terminal-UI app — not suitable for being driven from a
 backend service. For cloud / multi-tenant deployments swap the agent
 runtime to **Claude Agent SDK**, the same agent loop packaged as a Python
-library. The MCP server (with all 21 tools including `browser_player` and
+library. The MCP server (with every tool including `browser_player` and
 `skill_*`), skills, hooks, CLAUDE.md, `domain_skills/`, `memory/`,
 `inputs/`, `workspaces/` are **all unchanged**.
 
@@ -149,9 +156,9 @@ library. The MCP server (with all 21 tools including `browser_player` and
 
 ```powershell
 python -m runtime.cli explore example                   # human-readable
-python -m runtime.cli explore example --json            # JSON event per line
+python -m runtime.cli --json explore example            # JSON event per line
 python -m runtime.cli prompt "/show-state example"      # arbitrary prompt
-python -m runtime.cli prompt "say hello" --quiet --max-turns 2
+python -m runtime.cli --quiet --max-turns 2 prompt "say hello"
 ```
 
 Inside `runtime/`:
@@ -162,7 +169,7 @@ Inside `runtime/`:
 | `runtime.slash.expand(prompt, root)` | converts `/explore example` into the matching command body; pure-Python fallback |
 | `runtime.run.explore(site_id, ...)` | async generator: yields normalised events |
 | `runtime.run.run_prompt(prompt, ...)` | same, but for any prompt (slash commands auto-expanded) |
-| `runtime.run.RunSummary` | aggregate: turn_count, tool_call_breakdown, cost_usd, tokens |
+| `runtime.run.RunSummary` | aggregate: `turn_count`, `tool_calls`, `tool_call_breakdown`, `total_cost_usd`, `total_input_tokens`, `total_output_tokens` |
 | `runtime.cli.main()` | `python -m runtime.cli` entry |
 
 ### Minimal FastAPI sketch
@@ -220,8 +227,8 @@ async for msg in query(prompt="/explore xhs-tokyo", options=built.options):
 | Component | CLI deployment | Cloud (SDK) deployment |
 | --- | --- | --- |
 | `mcp_server/` | stdio subprocess | **same**, stdio subprocess |
-| 21 MCP tools (including `browser_player`, `skill_*`) | exposed | **same**, exposed identically |
-| `.claude/skills/` (5 skills) | loaded by CLI | loaded by SDK via `setting_sources=["project"]` |
+| every MCP tool (including `browser_player`, `skill_*`) | exposed | **same**, exposed identically |
+| `.claude/skills/` | loaded by CLI | loaded by SDK via `setting_sources=["project"]` |
 | `.claude/settings.json` hooks (guard + memory inject) | run by CLI | run by SDK |
 | `domain_skills/` library | accessed by `skill_*` MCP tools | **same**, no change |
 | `CLAUDE.md` | injected by CLI | injected by the `claude_code` system prompt preset |

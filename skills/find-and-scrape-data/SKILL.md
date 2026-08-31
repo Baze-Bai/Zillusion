@@ -35,7 +35,9 @@ all of them at once wastes context. Do not inline reference content here.
    # http client (the skill is httpx-first)?
    python -c "import httpx" 2>/dev/null && echo "httpx: yes" || echo "httpx: no"
    # real harness present as a sibling? (lets you optionally delegate phases 2-3)
-   test -d ../harness/.venv && echo "harness: yes" || echo "harness: no"
+   # Test a TRACKED path: .venv/ is gitignored, so probing for it reports
+   # "no" on every fresh clone and this branch would never be reachable.
+   test -f ../harness/runtime/cli.py && echo "harness: yes" || echo "harness: no"
    ```
 
    - **`playwright: no`** → fetch with `httpx`/`WebFetch` only; reach for a

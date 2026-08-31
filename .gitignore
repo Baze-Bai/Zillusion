@@ -41,3 +41,6 @@ harness/inputs/*
 Thumbs.db
 .idea/
 .vscode/
+
+# Pre-write copies made by backend/scripts/normalize_skills.py --apply.
+.skill-backups/

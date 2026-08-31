@@ -11,8 +11,7 @@ COPY pyproject.toml constraints.txt ./
 # resolves against PyPI-of-the-day and can drift into a breaking major between
 # two builds of the same commit. constraints.txt is the resolved set for this
 # image's platform; regenerate it (see its header) when pyproject changes.
-RUN pip install --no-cache-dir -c constraints.txt -e ".[dev]" 2>/dev/null \
-    || pip install --no-cache-dir -c constraints.txt .
+RUN pip install --no-cache-dir -c constraints.txt -e ".[dev]"
 
 COPY . .
 

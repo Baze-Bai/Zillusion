@@ -1,8 +1,8 @@
 {
-  "_comment": "MCP server entry. command pinned to harness's .venv python so we don't accidentally use global miniconda where new deps (yt-dlp, etc.) aren't installed. If you move the harness, update this path or use ${workspaceFolder} after verifying Claude Code expands it (last test: did NOT — see memory/sessions/2026-05-15-...).",
+  "_comment": "The browser-harness MCP server, spawned over stdio. `python` resolves from PATH, so run `claude` with the harness's virtualenv activated (or point this at your interpreter). Prefer that over an absolute path: an absolute path that does not exist on the machine reading this file makes the server fail to launch, and a failed stdio server does not stop the session — the agent simply runs with none of the browser tools. runtime.cli is immune (runtime/options.py falls back to sys.executable when the configured command is not an existing file); the `claude` CLI reads this file directly and is not.",
   "mcpServers": {
     "browser-harness": {
-      "command": "E:\\Zillusion_v1\\claude-code-browser-harness\\.venv\\Scripts\\python.exe",
+      "command": "python",
       "args": ["-m", "mcp_server.server"]
     }
   }

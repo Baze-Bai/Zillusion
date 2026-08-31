@@ -35,15 +35,42 @@ it on a trusted, localhost-bound instance.
   commit them.
 - You bring your own LLM and service API keys; none are bundled.
 
-## Known hardening backlog
+### What is stored on disk, and in what form
 
-The following are tracked for the OSS hardening pass (they matter most if you
-expose the service):
+Nothing here is encrypted at rest. On a single-tenant localhost install that is
+a deliberate trade — the decryption key would have to sit on the same disk, so
+it would stop nobody who can already read your files — but you should know
+exactly what is lying there:
 
-- Optional shared `X-API-Key` gate for the API surface.
-- Strict allow-list validation + path-containment on `site_id` / `query_id`
-  path parameters.
-- `Origin` validation on the takeover WebSocket.
+| File | Written when | Contents |
+| --- | --- | --- |
+| `harness/inputs/<site>/credentials.json` | you answer the credentials prompt for a keyed API | your API key, **plaintext JSON** |
+| `harness/auth_state.json` | a human takeover logs into a site | that site's **live session cookies and localStorage tokens**, plaintext |
+
+Treat both as you would the password to the account behind them. Anyone who
+reads `auth_state.json` can resume your logged-in session on that site until it
+expires — copying the repo directory copies them, even though git will not.
+
+Three mechanisms keep them out of things you might share, and it is worth
+knowing their edges: the agent is blocked from reading `credentials.json`
+through a `PreToolUse` hook (`.claude/hooks/guard_credentials_read.py`);
+downloadable run bundles exclude both filenames at any depth
+(`backend/src/services/run_bundle.py`); and shipped artifacts are scanned for
+credential literals — `runtime/validator_api.py` for the API route, and
+`runtime/secret_scan.py` for the agentic/takeover route, where the secrets are
+the live cookies rather than a key. None of that protects the files themselves.
+
+## Hardening that is already in place
+
+These ship enabled or available — you do not need to build them:
+
+- **Optional shared `X-API-Key` gate** on the API surface. Set `APP_API_KEY` and
+  every request must present it (`backend/src/main.py`, `_api_key_guard`).
+- **Path containment** on `site_id` / `query_id`: resolved paths are checked to
+  be inside the workspace root and raise otherwise
+  (`backend/src/services/harness_orchestrator.py`).
+- **`Origin` validation on the takeover WebSocket** against the configured CORS
+  origins (`backend/src/api/routes/takeover.py`).
 
 ## Reporting
 
