@@ -25,6 +25,7 @@ from mcp.server.fastmcp import FastMCP, Image
 
 from mcp_server import vision
 from mcp_server.browser import Browser
+from mcp_server.robots_policy import RobotsPolicy
 from mcp_server.skill_library import SkillEntry, SkillLibrary
 from mcp_server.tool_timeout import install_tool_timeout
 from mcp_server.workspace import Memory, Workspace
@@ -70,6 +71,9 @@ def _user_auth_path() -> Path:
 
 _browser = Browser(headless=HEADLESS)
 _skills = SkillLibrary(SKILLS_ROOT)
+# Consulted by browser_goto before every navigation. Reads CRAWLER_ROBOTS_MODE
+# at call time, not here, so the mode can be changed per session.
+_robots = RobotsPolicy()
 _memory = Memory(MEMORY_ROOT)
 _active_site: str | None = None
 
@@ -185,8 +189,32 @@ async def workspace_attach(site_id: str) -> dict[str, Any]:
 
 @mcp.tool()
 async def browser_goto(url: str, wait_until: str = "domcontentloaded") -> dict[str, Any]:
-    """Navigate the active page."""
-    return await _browser.goto(url, wait_until=wait_until)
+    """Navigate the active page.
+
+    Every navigation passes the robots.txt gate first (``mcp_server.robots_policy``,
+    ``CRAWLER_ROBOTS_MODE``: warn — the default — / enforce / off) and the
+    per-host pacing delay, which applies in all three modes. In ``warn`` a
+    disallowed URL is navigated but recorded, and the result carries
+    ``robots_warning``; in ``enforce`` it is refused instead.
+    """
+    verdict = await _robots.check(url)
+    if not verdict.allowed and verdict.mode == "enforce":
+        _mcp_log("robots_blocked", url=url)
+        return {
+            "error": "robots.txt disallows this URL (CRAWLER_ROBOTS_MODE=enforce)",
+            "url": url,
+            "robots": verdict.as_dict(),
+        }
+    await _robots.pace(url)
+    result = await _browser.goto(url, wait_until=wait_until)
+    if not verdict.allowed:
+        _robots.note_violation(url)
+        _mcp_log("robots_warn", url=url)
+        if isinstance(result, dict):
+            result["robots_warning"] = (
+                "robots.txt disallows this URL (warn mode — navigated anyway; recorded)"
+            )
+    return result
 
 
 @mcp.tool()

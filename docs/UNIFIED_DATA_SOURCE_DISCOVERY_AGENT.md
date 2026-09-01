@@ -1333,7 +1333,8 @@ L3: Judging 结果(需求+源)  TTL = 24 小时    Redis
 用户查询经过轻量检测器，包含身份证号/手机号/邮箱等 PII 直接拒绝。
 
 ### 10.3 反爬合规
-- 遵守 `robots.txt` / Per-domain 速率限制（默认 2 req/s）
+- `robots.txt`：每次导航前抓取并判定（`CRAWLER_ROBOTS_MODE`，默认 `warn` = 记录但放行；`enforce` = 拒绝）。⚠️ 解析器为 stdlib `urllib.robotparser`，不支持通配符，且 `User-agent` 与 `Disallow` 之间的空行会截断该记录——**`allowed` 只代表「本解析器读到的规则未禁止」，不代表站点许可**。Per-host 限速 `CRAWLER_MIN_HOST_INTERVAL_S`（默认 1s）在所有模式下生效。
+  使用者仍须自行遵守 robots.txt、站点服务条款与所在法域的法律。
 - 优先走官方 API，爬虫只是兜底
 - 商业受保护源（Bloomberg、Wind 等）主动跳过
 

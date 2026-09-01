@@ -73,15 +73,35 @@ for what you point it at**, and the list below is exact rather than reassuring,
 because a compliance claim that does not survive a reader opening the source is
 worse than no claim.
 
-**It does not honour `robots.txt`.** There is no robots parsing or enforcement
-anywhere on the crawl path. If a site's `robots.txt` matters to you — legally,
-contractually, or ethically — you have to check it yourself, before you run.
+**`robots.txt` is fetched and consulted on every navigation — and you should
+still check it yourself.** `CRAWLER_ROBOTS_MODE` has three settings:
 
-**Crawl-side request pacing is whatever the generated scraper happens to do.**
-No global rate limiter, no politeness delay, no per-host concurrency cap governs
-the crawl. A generated `workflow.py` paces itself only if the agent wrote pacing
-into it. Point this at a small site and it can hit it harder than a human ever
-would — which is both rude and the fastest way to get your IP blocked. The
+| mode | behaviour |
+| --- | --- |
+| `warn` *(default)* | fetch robots.txt, decide, record a violation and attach `robots_warning` to the result — then navigate anyway |
+| `enforce` | refuse the navigation instead |
+| `off` | skip the check (pacing still applies) |
+
+**Read this before you trust a verdict.** The parser is Python's
+`urllib.robotparser`, and it has two limits we measured rather than assumed —
+both of which make it *miss* a rule, never invent one:
+
+- A blank line between `User-agent:` and its `Disallow:` lines ends the record,
+  so the rules after it are dropped. GitHub's robots.txt is written exactly that
+  way, and stdlib consequently reports its entire `User-agent: *` section as
+  empty. We checked: `https://github.com/search/advanced` comes back *allowed*.
+- `*` and `$` in a path are literal characters here, not wildcards.
+
+So an `allowed` verdict means **"no rule this parser could read forbids it"**,
+not "the site permits it". Treat it as a safety net with holes, not a clearance.
+Swap in a spec-complete parser via `RobotsPolicy(fetch=...)` if you need real
+conformance.
+
+**Per-host pacing is real and applies in every mode**, including `off`:
+`CRAWLER_MIN_HOST_INTERVAL_S` (default 1s) spaces consecutive requests to the
+same host, and a `Crawl-delay` in robots.txt is honoured up to 10s. What this
+does *not* govern is a generated `workflow.py` at full-crawl time — that runs as
+its own process and paces itself only if the agent wrote pacing into it. The
 `rate_limit` field on an API manifest is prose the agent *records*, not a limit
 anything enforces.
 
@@ -104,9 +124,30 @@ oversight — but note the consequence: logging in makes the session yours, and
 whatever the site's terms say about automated access then applies to your
 account.
 
-Some of the above is present in the commercial hosted build and not here — the
-robots policy layer in particular. If you need that, it is not in this
-repository today; say so in an issue and it can be prioritised.
+### Your obligations, which no setting discharges
+
+The gates above are aids. They do not make a crawl lawful, and they do not
+transfer responsibility to this project. By running this you are the one making
+the requests, and you are asked to:
+
+1. **Honour `robots.txt`** — including the parts this parser cannot read (see
+   the two limits above). When it matters, open the file and read it yourself.
+2. **Read the site's Terms of Service**, and respect them. Many sites permit
+   crawling in robots.txt while restricting it in their terms; the two are
+   different documents and the terms are the one with legal weight.
+3. **Obey the law that applies to you** — computer-misuse, copyright, database
+   rights, and data-protection law (GDPR, CCPA, PIPL and their equivalents) all
+   reach web scraping, and what is lawful differs by jurisdiction and by what
+   you collect. Personal data raises the bar considerably.
+4. **Crawl gently.** The defaults are deliberately slow. Raising them is your
+   call and your consequence: a site you overload is a real service degraded for
+   its real users.
+5. **Stop when asked.** A block, a `429`, a cease-and-desist — treat each as the
+   answer it is, not an obstacle to route around.
+
+Apache-2.0 grants you the software, not permission to use it against any
+particular target. **The licence disclaims all warranty and liability; the
+consequences of what you crawl are yours.**
 
 ## Three ways to use it
 
