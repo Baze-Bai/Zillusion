@@ -43,16 +43,47 @@ import argparse
 import asyncio
 import hashlib
 import json
+import os
 import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-HARNESS_DIR = ROOT / "harness"
+HARNESS_DIR = Path(os.environ.get("HARNESS_DIR") or (ROOT / "harness"))
 HARNESS_INPUTS = HARNESS_DIR / "inputs"
-# The harness MUST run on its own venv python (see harness CLAUDE.md).
-HARNESS_PY = HARNESS_DIR / ".venv" / "Scripts" / "python.exe"
+
+
+def _resolve_harness_python() -> Path:
+    """The interpreter that runs `python -m runtime.cli`.
+
+    This used to be the hardcoded `harness/.venv/Scripts/python.exe`, which is a
+    Windows path — so on Linux, and therefore inside the Docker image, it named
+    a file that does not exist and every explore-loop spawn failed. Resolution
+    order now:
+
+      1. ``$HARNESS_PYTHON`` — an explicit operator override, and what the
+         container sets, since there the harness shares the backend's
+         interpreter rather than having a venv of its own (the two dependency
+         sets resolve together without conflict).
+      2. The harness's own venv, under whichever layout this OS uses —
+         ``Scripts/python.exe`` on Windows, ``bin/python`` elsewhere. This is
+         the local-dev path the harness CLAUDE.md describes.
+      3. ``sys.executable``. Not a guess: if there is no venv, the process
+         spawning the harness is the best interpreter available, and failing
+         loudly later beats spawning a path that cannot exist.
+    """
+    override = os.environ.get("HARNESS_PYTHON")
+    if override:
+        return Path(override)
+    venv = HARNESS_DIR / ".venv"
+    candidate = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    if candidate.is_file():
+        return candidate
+    return Path(sys.executable)
+
+
+HARNESS_PY = _resolve_harness_python()
 
 # DataSourceType.EMBEDDED_DATA value (src/models/data_source.py).
 EMBEDDED = "embedded"

@@ -74,8 +74,11 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      # Repo root, not ./backend: the image also carries harness/ and scripts/,
+      # because the build + validate + run stages are the harness running as a
+      # subprocess of this service, not a separate container it talks to.
+      context: .
+      dockerfile: backend/Dockerfile
     ports:
       - "${BIND_HOST:-127.0.0.1}:8000:8000"
     env_file:
@@ -86,7 +89,20 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - SEARCH_SEARXNG_URL=http://searxng:8080
     volumes:
-      - ./backend/src:/app/src
+      # Source mount for --reload; path follows the image's repo-mirroring layout.
+      - ./backend/src:/app/backend/src
+      # The harness writes per-site workspaces (scraper, samples, run output) and
+      # reads staged inputs. Named volumes so a `docker compose down` without -v
+      # does not throw away a scraper the agent spent minutes and real tokens
+      # building.
+      - harness_workspaces:/app/harness/workspaces
+      - harness_inputs:/app/harness/inputs
+      # Discovery session artifacts — final_report.json lives here, and the
+      # build stage refuses to start without it. The session ROW is in Postgres
+      # (a volume), so without this one a `docker compose down` leaves sessions
+      # listed as "completed" whose report is gone: the sidebar offers a Build
+      # button that can only answer "no final_report for this session".
+      - agent_workspace:/app/backend/agent-workspace
     depends_on:
       postgres:
         condition: service_healthy
@@ -112,3 +128,6 @@ services:
 volumes:
   pgdata:
   qdrant_data:
+  harness_workspaces:
+  harness_inputs:
+  agent_workspace:

@@ -1,0 +1,46 @@
+# The backend image builds from the REPOSITORY ROOT (it carries harness/ and
+# scripts/ alongside backend/), so without this file the whole working tree —
+# .git, node_modules, local virtualenvs, crawl output — gets shipped to the
+# Docker daemon on every build.
+#
+# Note this does NOT apply to the frontend image: .dockerignore is read from the
+# build context root, and that build's context is ./frontend.
+
+.git
+.gitignore
+.github
+
+# Virtualenvs and caches — rebuilt inside the image, and platform-wrong anyway.
+**/.venv
+**/venv
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/node_modules
+**/.next
+
+# Secrets. The image never needs them; compose injects env at run time.
+.env
+**/.env
+!**/.env.example
+**/auth_state.json
+**/credentials.json
+.skill-backups
+
+# Crawl output and per-site state. The container gets these as named volumes,
+# so baking a copy in would both bloat the image and shadow the mount.
+harness/workspaces/*
+!harness/workspaces/.gitkeep
+harness/run-logs
+harness/media
+backend/agent-workspace
+
+# Not used by the backend image (the frontend has its own build).
+frontend
+
+# Docs and media the runtime never reads. demo.gif alone is 5.7MB.
+docs
+*.md
+!README.md
