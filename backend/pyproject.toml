@@ -52,8 +52,13 @@ dependencies = [
     # Semantic search over the local API directory (query_api_directory tool):
     # bge-m3 dense + jieba BM25 + RRF over ~23k rows. Building the index encodes
     # every row once — GPU strongly preferred (CPU ~55min vs ~4min on a 4090).
-    # `pip install torch` resolves to the CPU wheel; for GPU reinstall from the
-    # CUDA index: `pip install torch --index-url https://download.pytorch.org/whl/cu124`.
+    # NOTE, and it is the opposite of what this comment used to say: `pip install
+    # torch` resolves to the CPU wheel only on Windows/macOS. On LINUX — which is
+    # what the Docker image is built on — PyPI's torch is the CUDA build, and it
+    # pulls ~4.6GB of nvidia-* and triton that a container with no GPU can never
+    # use. backend/Dockerfile therefore installs torch from
+    # https://download.pytorch.org/whl/cpu before this file is resolved. For GPU,
+    # see the note there.
     "sentence-transformers>=3.0.0",
     "torch>=2.0.0",
     "jieba>=0.42.1",
