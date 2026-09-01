@@ -83,6 +83,10 @@ class FinalReport(BaseModel):
 
     # === Meta ===
     iterations: int = 1
-    total_candidates_screened: int = 0
+    # (There was a `total_candidates_screened` here. It read a state key
+    # `raw_candidates` that no node has written since the staged pipeline was
+    # replaced by the agentic discovery node, so it reported 0 on every run —
+    # which reads as "screened nothing" rather than "not measured". Removed
+    # rather than defaulted: a number nobody produces is worse than no number.)
     processing_time_seconds: float = 0.0
     estimated_cost_usd: float = 0.0

@@ -123,7 +123,6 @@ export interface FinalReport {
   file_download_guide?: string;
   embedded_extraction_guide?: string;
   iterations: number;
-  total_candidates_screened: number;
   processing_time_seconds: number;
   estimated_cost_usd: number;
 }

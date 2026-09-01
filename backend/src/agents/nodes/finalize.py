@@ -696,12 +696,13 @@ async def finalize_node(state: AgentState) -> dict:
         coverage_summary, requirement.original_query
     )
 
-    # Calculate total candidates screened
-    raw_count = len(state.get("raw_candidates", []))
+    # The funnel used to open on `raw_candidates`, a state key nothing has
+    # written since the agentic discovery node replaced the staged pipeline —
+    # it logged 0 on every run and fed a report field that said the same.
     normalized_count = len(state.get("normalized_sources", []))
 
-    logger.debug("Stage 8 screening funnel: raw=%d → normalized=%d → scored=%d",
-                  raw_count, normalized_count, total)
+    logger.debug("Stage 8 screening funnel: normalized=%d → scored=%d",
+                  normalized_count, total)
 
     report = FinalReport(
         query=requirement.original_query,
@@ -716,7 +717,6 @@ async def finalize_node(state: AgentState) -> dict:
         file_download_guide=file_guide,
         embedded_extraction_guide=embedded_guide,
         iterations=iteration,
-        total_candidates_screened=raw_count,
         processing_time_seconds=sum(state.get("stage_timings", {}).values()),
         # Prefer the request-scoped running total (covers LLM calls in
         # helper modules that discard the `usage` tuple element). Fall

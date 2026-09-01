@@ -1040,7 +1040,6 @@ class FinalReport(BaseModel):
 
     # === 元信息 ===
     iterations: int
-    total_candidates_screened: int
     processing_time_seconds: float
     estimated_cost_usd: float
 ```
