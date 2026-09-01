@@ -1,5 +1,7 @@
 # Zillusion — Data Source Discovery & Scraper-Building Agent
 
+**English** | [中文文档](README.zh-CN.md)
+
 Turn a plain-language data need into **a vetted list of data sources, a working
 validated scraper, or a finished dataset** — driven by an LLM agent end to end.
 
@@ -151,8 +153,6 @@ of what you crawl are yours.**
 
 ## Three ways to use it
 
-| Form | For whom | What you run | Weight |
-|------|----------|--------------|--------|
 | Form | For whom | What you run | Weight |
 |------|----------|--------------|--------|
 | **① Self-hosted web app** | Most users — discover → build → validate → run, in a browser | `docker compose up`, browse `localhost:3000` | Heavy (~5GB image; carries the harness and Chromium) |
