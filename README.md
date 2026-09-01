@@ -3,7 +3,7 @@
 Turn a plain-language data need into **a vetted list of data sources, a working
 validated scraper, or a finished dataset** — driven by an LLM agent end to end.
 
-[![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Elastic%20License%202.0-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)
 [![Stars](https://img.shields.io/github/stars/Baze-Bai/Zillusion?style=social)](https://github.com/Baze-Bai/Zillusion/stargazers)
 
@@ -145,9 +145,9 @@ the requests, and you are asked to:
 5. **Stop when asked.** A block, a `429`, a cease-and-desist — treat each as the
    answer it is, not an obstacle to route around.
 
-Apache-2.0 grants you the software, not permission to use it against any
-particular target. **The licence disclaims all warranty and liability; the
-consequences of what you crawl are yours.**
+The licence grants you the software, not permission to use it against any
+particular target. **It disclaims all warranty and liability; the consequences
+of what you crawl are yours.**
 
 ## Three ways to use it
 
@@ -358,4 +358,30 @@ asked for, and which stage gave up.
 
 ## License
 
-[Apache-2.0](LICENSE).
+**[Elastic License 2.0](LICENSE)** — source-available, not OSI open source. The
+distinction is real and worth two paragraphs of your time rather than a badge
+you have to reverse-engineer.
+
+**What you may do**, without asking and without paying: read it, modify it, run
+it, self-host it — including inside a company, for commercial work. Deploy it on
+your own infrastructure for your own team and you are within the licence. Fork
+it, build on it, ship a modified copy.
+
+**The one thing you may not do** is the single limitation that matters here,
+quoted from the licence:
+
+> You may not provide the software to third parties as a hosted or managed
+> service, where the service provides users with access to any substantial set
+> of the features or functionality of the software.
+
+In plain terms: run it for yourself, don't resell it as a service. That is the
+line, and it is drawn there deliberately — a hosted build of this same pipeline
+is what funds the work, so competing hosted offerings are carved out while every
+other use, commercial included, stays open.
+
+The licence also asks that you pass these terms along with any copy you
+distribute, and mark modified copies as modified.
+
+**Third-party services keep their own licences.** Firecrawl (AGPL-3.0) and
+SearXNG run as standalone HTTP services this project calls over the network and
+never links; neither is redistributed here.

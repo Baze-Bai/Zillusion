@@ -57,5 +57,11 @@ welcome and expected; personal hostility is not.
 
 ## License
 
-By contributing you agree that your contributions are licensed under
-[Apache-2.0](LICENSE), the same as the project.
+By contributing you agree that your contributions are licensed under the
+[Elastic License 2.0](LICENSE), the same as the project.
+
+Worth knowing before you invest time: ELv2 is **source-available, not OSI open
+source**. You may use, modify and self-host this commercially; you may not offer
+it to third parties as a hosted or managed service. If contributing to something
+under those terms is not for you, that is a fair call — better to know now than
+after a pull request.
