@@ -112,12 +112,24 @@ repository today; say so in an issue and it can be prioritised.
 
 | Form | For whom | What you run | Weight |
 |------|----------|--------------|--------|
-| **① Self-hosted web app** | Most users — full experience | `docker compose up`, browse `localhost:3000` | Heavy (full stack) |
-| **② Harness CLI** | Developers, scripting, CI | `python -m runtime.cli <cmd> <site>` | Medium |
+| Form | For whom | What you run | Weight |
+|------|----------|--------------|--------|
+| **① Self-hosted web app** | Most users — discover → build → validate → run, in a browser | `docker compose up`, browse `localhost:3000` | Heavy (~5GB image; carries the harness and Chromium) |
+| **② Harness CLI** | Developers, scripting, CI — one site at a time, no discovery | `python -m runtime.cli <cmd> <site>` | Medium |
 | **③ Claude Code skill** | Anyone already using Claude Code | drop `skills/find-and-scrape-data` into `.claude/skills/` | Light (near-zero infra) |
 
 All three share the same harness core. **You always bring your own LLM API key**
 (DeepSeek / GLM / Claude / OpenAI / …) — none is bundled.
+
+**What a real run costs**, measured on this stack with DeepSeek, so you are not
+guessing: one discovery pass over "quotes with author and tags" took **8 minutes
+and returned 6 sources**; building a scraper for one of them — explore, probe the
+live page, write `workflow.py`, validate it — took the pipeline to a
+`deterministic` verdict. Discovery alone on a broader question ("global CO2
+emissions by country") ran **11 minutes and $1.71** for 18 sources. The whole
+exercise, two discovery passes plus a build, came to **$4.54**. Costs scale with
+the model you point it at and how hard the site is; treat these as an order of
+magnitude, not a quote.
 
 ---
 
