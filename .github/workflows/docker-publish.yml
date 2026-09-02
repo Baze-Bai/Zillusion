@@ -6,7 +6,7 @@ name: Docker images
 #
 #     docker compose pull && docker compose up
 #
-# is an alternative to building ~5GB locally with `docker compose up --build`.
+# is an alternative to building ~2.5GB locally with `docker compose up --build`.
 # docker-compose.yml names these images on the two services that have a
 # `build:`; nothing else in the stack changes.
 #

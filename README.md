@@ -155,7 +155,7 @@ of what you crawl are yours.**
 
 | Form | For whom | What you run | Weight |
 |------|----------|--------------|--------|
-| **① Self-hosted web app** | Most users — discover → build → validate → run, in a browser | `docker compose up`, browse `localhost:3000` | Heavy (~5GB image; carries the harness and Chromium) |
+| **① Self-hosted web app** | Most users — discover → build → validate → run, in a browser | `docker compose up`, browse `localhost:3000` | Heavy (~2.5GB image; carries the harness and Chromium) |
 | **② Harness CLI** | Developers, scripting, CI — one site at a time, no discovery | `python -m runtime.cli <cmd> <site>` | Medium |
 | **③ Claude Code skill** | Anyone already using Claude Code | drop `skills/find-and-scrape-data` into `.claude/skills/` | Light (near-zero infra) |
 
@@ -225,7 +225,7 @@ docker compose down                        # stop (add -v to also drop db volume
 built for **linux/amd64 and linux/arm64** on every push to `main` — so an Apple
 Silicon Mac runs them natively instead of emulating x86. `latest` tracks `main`;
 pull again after a `git pull`. To build the two images from your checkout
-instead (the backend one is ~5GB and takes a while), use `docker compose up
+instead (the backend one is ~2.5GB and takes a while), use `docker compose up
 --build`. A plain `docker compose up` does neither: it uses whatever image is
 already present locally, and builds one that is not.
 

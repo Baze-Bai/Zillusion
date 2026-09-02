@@ -126,7 +126,7 @@ agent 自己写登录脚本被明令禁止。这是刻意划定的边界，不�
 
 | 形态 | 适合谁 | 你要运行什么 | 分量 |
 |------|--------|--------------|------|
-| **① 自托管 Web 应用** | 多数人 —— 在浏览器里走完 发现→构建→验证→运行 | `docker compose up`，访问 `localhost:3000` | 重（约 5GB 镜像；内含 harness 与 Chromium） |
+| **① 自托管 Web 应用** | 多数人 —— 在浏览器里走完 发现→构建→验证→运行 | `docker compose up`，访问 `localhost:3000` | 重（约 2.5GB 镜像；内含 harness 与 Chromium） |
 | **② Harness CLI** | 开发者 / 脚本 / CI —— 一次一个站点，无发现阶段 | `python -m runtime.cli <cmd> <site>` | 中 |
 | **③ Claude Code 技能** | 已经在用 Claude Code 的人 | 把 `skills/find-and-scrape-data` 放进 `.claude/skills/` | 轻（几乎零基础设施） |
 
@@ -193,7 +193,7 @@ docker compose down                        # 停止（加 -v 同时删除数据�
 每次推送到 `main` 都会为 **linux/amd64 与 linux/arm64** 各构建一份——
 所以 Apple Silicon 的 Mac 是原生运行，而不是模拟 x86。`latest` 跟随 `main`；
 `git pull` 之后记得再 `pull` 一次镜像。若想改用你本地检出的代码来构建这两个镜像
-（backend 那个约 5GB，要等一阵子），用 `docker compose up --build`。
+（backend 那个约 2.5GB，要等一阵子），用 `docker compose up --build`。
 单独的 `docker compose up` 两者都不做：本地已有镜像就直接用，没有才会构建。
 
 可选组件：
