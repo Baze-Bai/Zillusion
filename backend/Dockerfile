@@ -16,21 +16,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/pyproject.toml backend/constraints.txt /app/backend/
 COPY harness/pyproject.toml harness/constraints.txt /app/harness/
 
-# torch FIRST, from PyTorch's CPU index, because on Linux the PyPI `torch` wheel
-# is the CUDA build and drags the whole GPU stack in behind it. Measured in this
-# image before this line existed: nvidia/ 2.7G + torch/ 1.2G + triton/ 691M —
-# about 4.6G of a 10.1G image, none of which can ever run, since the container
-# has no GPU and compose sets up no device passthrough.
-#
-# Installing it here means the main install below finds `torch` already
-# satisfied and never asks PyPI for it, so the nvidia pins in constraints.txt
-# stay inert (a constraints file caps versions; it does not pull anything in).
-#
-# If you DO want GPU inference, drop this line and rebuild — the plain PyPI
-# resolve gives you the CUDA build — and add the device reservation to
-# docker-compose.yml, which is what actually makes it reachable.
-RUN pip install --no-cache-dir torch==2.13.0 --index-url https://download.pytorch.org/whl/cpu
-
 # -c constraints.txt: pyproject pins only floors, so an unconstrained build
 # resolves against PyPI-of-the-day and can drift into a breaking major between
 # two builds of the same commit. constraints.txt is the resolved set for this

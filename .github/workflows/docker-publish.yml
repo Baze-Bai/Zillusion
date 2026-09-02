@@ -14,9 +14,9 @@ name: Docker images
 #     ghcr.io/baze-bai/zillusion-frontend
 #
 # Platforms: linux/amd64 and linux/arm64, each built on a NATIVE runner rather
-# than under QEMU. The backend image installs torch and a Chromium, and both
-# the pip resolve and `playwright install --with-deps` are the kind of work
-# that emulation turns from minutes into a job that times out. GitHub's hosted
+# than under QEMU. The backend image installs a pinned Python dependency set
+# and a Chromium with its system libraries, and both are the kind of work that
+# emulation turns from minutes into a job that times out. GitHub's hosted
 # arm64 runners are free for public repositories, so there is no reason to
 # emulate. Each single-arch image is pushed by digest, and the `merge` job
 # stitches the two digests into one multi-arch manifest per image — the
@@ -172,3 +172,14 @@ jobs:
 
       - name: Inspect
         run: docker buildx imagetools inspect ${{ steps.vars.outputs.image }}:${{ steps.meta.outputs.version }}
+
+      # The number the README quotes ("~NGB image") comes from here, not from
+      # memory: pull the manifest just merged, for this runner's own platform,
+      # and print what `docker images` would show. Compressed layer sizes are in
+      # the manifest already; this is the on-disk figure a user actually sees.
+      - name: Report on-disk size (linux/amd64)
+        run: |
+          ref="${{ steps.vars.outputs.image }}:${{ steps.meta.outputs.version }}"
+          docker pull --quiet --platform linux/amd64 "$ref"
+          bytes=$(docker image inspect --format '{{ .Size }}' "$ref")
+          echo "$ref  $(awk -v b="$bytes" 'BEGIN { printf "%.2f", b / 1e9 }') GB uncompressed (linux/amd64)"
