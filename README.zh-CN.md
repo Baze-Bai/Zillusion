@@ -182,11 +182,19 @@ cp backend/.env.example backend/.env
 起栈、验证、使用：
 
 ```bash
-docker compose up --build                  # postgres + redis + searxng + backend + frontend
+docker compose pull && docker compose up   # postgres + redis + searxng + backend + frontend
 curl http://localhost:8000/api/v1/health   # -> {"status":"ok", ...}
 # 打开 http://localhost:3000
 docker compose down                        # 停止（加 -v 同时删除数据库卷）
 ```
+
+`pull` 会从 GHCR 拉取预构建好的 backend 与 frontend 镜像
+（`ghcr.io/baze-bai/zillusion-backend`、`ghcr.io/baze-bai/zillusion-frontend`），
+每次推送到 `main` 都会为 **linux/amd64 与 linux/arm64** 各构建一份——
+所以 Apple Silicon 的 Mac 是原生运行，而不是模拟 x86。`latest` 跟随 `main`；
+`git pull` 之后记得再 `pull` 一次镜像。若想改用你本地检出的代码来构建这两个镜像
+（backend 那个约 5GB，要等一阵子），用 `docker compose up --build`。
+单独的 `docker compose up` 两者都不做：本地已有镜像就直接用，没有才会构建。
 
 可选组件：
 

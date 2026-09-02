@@ -214,11 +214,20 @@ cp backend/.env.example backend/.env
 Bring up the stack, verify, use:
 
 ```bash
-docker compose up --build                  # postgres + redis + searxng + backend + frontend
+docker compose pull && docker compose up   # postgres + redis + searxng + backend + frontend
 curl http://localhost:8000/api/v1/health   # -> {"status":"ok", ...}
 # open http://localhost:3000
 docker compose down                        # stop (add -v to also drop db volumes)
 ```
+
+`pull` fetches the prebuilt backend and frontend images from GHCR
+(`ghcr.io/baze-bai/zillusion-backend`, `ghcr.io/baze-bai/zillusion-frontend`),
+built for **linux/amd64 and linux/arm64** on every push to `main` — so an Apple
+Silicon Mac runs them natively instead of emulating x86. `latest` tracks `main`;
+pull again after a `git pull`. To build the two images from your checkout
+instead (the backend one is ~5GB and takes a while), use `docker compose up
+--build`. A plain `docker compose up` does neither: it uses whatever image is
+already present locally, and builds one that is not.
 
 Optional add-on:
 
