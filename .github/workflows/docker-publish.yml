@@ -1,0 +1,174 @@
+name: Docker images
+
+# Builds the two images the compose stack runs — backend (which also carries
+# harness/ and scripts/; see the note at the top of backend/Dockerfile) and
+# frontend — and publishes them to GHCR, so that
+#
+#     docker compose pull && docker compose up
+#
+# is an alternative to building ~5GB locally with `docker compose up --build`.
+# docker-compose.yml names these images on the two services that have a
+# `build:`; nothing else in the stack changes.
+#
+#     ghcr.io/baze-bai/zillusion-backend
+#     ghcr.io/baze-bai/zillusion-frontend
+#
+# Platforms: linux/amd64 and linux/arm64, each built on a NATIVE runner rather
+# than under QEMU. The backend image installs torch and a Chromium, and both
+# the pip resolve and `playwright install --with-deps` are the kind of work
+# that emulation turns from minutes into a job that times out. GitHub's hosted
+# arm64 runners are free for public repositories, so there is no reason to
+# emulate. Each single-arch image is pushed by digest, and the `merge` job
+# stitches the two digests into one multi-arch manifest per image — the
+# documented pattern from docker/build-push-action.
+#
+# Tags: `latest` and `main` track the default branch, every build also gets
+# `sha-<short>`, and a `vX.Y.Z` git tag produces `X.Y.Z`, `X.Y` and `latest`.
+# No path filter: a docs-only push re-runs this, but .dockerignore keeps docs
+# out of the build context and the layer cache makes that run cheap. The
+# alternative — a filter that must be kept in step with what the Dockerfiles
+# COPY — is the kind of thing that silently stops rebuilding when someone adds
+# a directory.
+#
+# Not done here: no build on pull requests. A fork's PR cannot log in to GHCR
+# (no packages:write), so the job would fail for the wrong reason; and a 4-leg
+# build on every PR is a lot of runner time to prove a Dockerfile still parses.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [backend, frontend]
+        platform: [linux/amd64, linux/arm64]
+        include:
+          # `include` entries whose keys match an existing combination extend it,
+          # so these attach a context/Dockerfile to each image and a runner to
+          # each platform without spelling out all four combinations.
+          - image: backend
+            context: .
+            dockerfile: ./backend/Dockerfile
+          - image: frontend
+            context: ./frontend
+            dockerfile: ./frontend/Dockerfile
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Image name and platform slug
+        id: vars
+        run: |
+          # GHCR requires a lowercase path; the repository owner is not.
+          echo "image=${REGISTRY}/${GITHUB_REPOSITORY_OWNER,,}/zillusion-${{ matrix.image }}" >> "$GITHUB_OUTPUT"
+          platform="${{ matrix.platform }}"
+          echo "slug=${platform//\//-}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Labels only, here. Tags are applied once, to the merged manifest below.
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ steps.vars.outputs.image }}
+
+      - uses: docker/build-push-action@v6
+        id: build
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Push the image by digest only; the merge job gives it names.
+          outputs: type=image,name=${{ steps.vars.outputs.image }},push-by-digest=true,name-canonical=true,push=true
+          # The default provenance attestation is stored as an extra manifest
+          # that registries render as an `unknown/unknown` platform. Off, so the
+          # final manifest lists exactly the two platforms it serves.
+          provenance: false
+          cache-from: type=gha,scope=${{ matrix.image }}-${{ steps.vars.outputs.slug }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}-${{ steps.vars.outputs.slug }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.image }}-${{ steps.vars.outputs.slug }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    needs: build
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        image: [backend, frontend]
+    steps:
+      - name: Image name
+        id: vars
+        run: echo "image=${REGISTRY}/${GITHUB_REPOSITORY_OWNER,,}/zillusion-${{ matrix.image }}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-${{ matrix.image }}-*
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ steps.vars.outputs.image }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Create the multi-arch manifest
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ steps.vars.outputs.image }}@sha256:%s ' *)
+
+      - name: Inspect
+        run: docker buildx imagetools inspect ${{ steps.vars.outputs.image }}:${{ steps.meta.outputs.version }}

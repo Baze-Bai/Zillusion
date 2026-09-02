@@ -5,9 +5,11 @@ on:
     branches: [main]
   pull_request:
 
-# Deliberately narrow. This gates ONE thing — the harness lint rule set that
-# harness/pyproject.toml pins — and says plainly what it does not gate, because
-# a green check that implies more coverage than it has is worse than no check.
+# Deliberately narrow. This gates TWO things — the harness lint rule set that
+# harness/pyproject.toml pins, and whether the harness still installs and
+# imports on Linux, macOS and Windows — and says plainly what it does not gate,
+# because a green check that implies more coverage than it has is worse than
+# no check.
 #
 # Not gated here, and why:
 #
@@ -16,13 +18,18 @@ on:
 #     paths, and browser tests needing a `playwright install` this job does not
 #     run. Gating on a suite that is red for reasons unrelated to the change
 #     under review teaches everyone to ignore the red light. Fix those two
-#     families first, then add the suites.
+#     families first, then add the suites — and the harness-install matrix
+#     below is where they would go, since it already has the three OSes.
 #
 #   * backend lint. backend/pyproject.toml selects a much broader rule set
 #     (E, F, I, N, W, UP, B, SIM, TCH) than harness does, and it has never been
 #     enforced — a clean run today reports 329 findings, 171 of them E501 line
 #     lengths. Turning that on is a real cleanup, not a config line, and it
 #     wants the backend suite runnable first so the sweep can be verified.
+#
+#   * The Docker images. Those are built and published by docker-publish.yml
+#     on pushes to main, not checked here on pull requests — see that file for
+#     why.
 jobs:
   harness-lint:
     runs-on: ubuntu-latest
@@ -41,3 +48,32 @@ jobs:
       # goalposts in the middle of a review.
       - run: pip install "ruff==0.16.5"
       - run: ruff check runtime mcp_server
+
+  # Install-and-import smoke on the three desktop OSes: the exact command the
+  # README gives for the harness CLI, then both entry points imported, then
+  # `--help`. It is not a test run. What it catches is the failure class
+  # CONTRIBUTING.md describes — a dependency drifting into a major that breaks
+  # an import — and it catches it on the platforms people actually clone onto,
+  # rather than only inside the Linux image. constraints.txt was resolved for
+  # linux; on the other two it caps versions and is ignored wherever a pin does
+  # not apply, which is what its header promises and what this job checks.
+  harness-install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: harness
+    env:
+      # `--help` text is UTF-8; the Windows runner's console default is not.
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -c constraints.txt -e .
+      - run: python -c "import runtime.cli, mcp_server.server"
+      - run: python -m runtime.cli --help

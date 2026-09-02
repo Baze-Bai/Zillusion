@@ -14,6 +14,17 @@
 #   - Self-host: run firecrawl separately and point
 #                SEARCH_FIRECRAWL_SELF_HOSTED_URL at it
 #   See https://github.com/firecrawl/firecrawl
+#
+# Images: the two services with a `build:` (backend, frontend) also name the
+# prebuilt image that .github/workflows/docker-publish.yml publishes to GHCR on
+# every push to main, for linux/amd64 and linux/arm64. A plain `docker compose
+# up` does not pull those — it uses an image already present locally and
+# builds one that is not — so pick one explicitly:
+#   docker compose pull && docker compose up    # prebuilt, no local build
+#   docker compose up --build                   # built from this checkout
+# ZILLUSION_TAG selects the image tag (default `latest`, which tracks main;
+# `sha-<short>` pins a build). The source mounts below apply either way, so the
+# code that runs is always this checkout's — keep the image current with it.
 
 services:
   postgres:
@@ -73,6 +84,7 @@ services:
       - qdrant_data:/qdrant/storage
 
   backend:
+    image: ghcr.io/baze-bai/zillusion-backend:${ZILLUSION_TAG:-latest}
     build:
       # Repo root, not ./backend: the image also carries harness/ and scripts/,
       # because the build + validate + run stages are the harness running as a
@@ -112,6 +124,7 @@ services:
         condition: service_healthy
 
   frontend:
+    image: ghcr.io/baze-bai/zillusion-frontend:${ZILLUSION_TAG:-latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile
